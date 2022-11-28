@@ -47,7 +47,7 @@ typedef struct __flow_base_s {
   };
   // offset 40
   // proto_t *alproto;   // protocol
-  void *app_data; // app specify data, update by data_handler
+  void *app_data; // app specify data, update by data_handler, dont care!!!
   // offset 56
   uint32_t hash;     // full hash cache
   uint32_t flow_idx; // index of flow in flow pool, not use!!!
@@ -55,8 +55,9 @@ typedef struct __flow_base_s {
   struct timeval startts;
   struct timeval lastts; // fixme last pkt timestamp of flow
   //
-  u_int exp_seq_up;
-  u_int exp_seq_down;
+  u_int exp_seq_up;   // direction up
+  u_int exp_seq_down; // direction down
+
 } flow_base_t;
 
 #define FLOW_PTR(f) ((flow_base_t *)(f))

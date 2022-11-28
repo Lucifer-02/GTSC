@@ -36,5 +36,7 @@ void insert(HashTable table, uint key, flow_base_t value);
 void printHashTable(const HashTable table);
 // print all node in list
 void print_list(const Node *head);
+// get number of node in hash table
+int count_nodes(const HashTable table);
 
 #endif

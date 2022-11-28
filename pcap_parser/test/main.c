@@ -122,16 +122,6 @@ Node *search(HashTable table, uint key) {
   return NULL;
 }
 
-// print search result
-void printSearchResult(const Node *node) {
-  if (node == NULL) {
-    printf("key not found\n");
-  } else {
-    for (const Node *current = node; current != NULL; current = current->next) {
-      printf("key: %d, value: %c\n", current->key, current->value);
-    }
-  }
-}
 
 // free list of node
 void freeList(Node *node) {

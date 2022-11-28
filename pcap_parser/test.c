@@ -1,20 +1,11 @@
 #include "lib/dissection.h"
 #include "lib/flow_api.h"
 #include "lib/hash_table.h"
-
-#include <pcap.h>
-#include <stdint.h>
-#include <stdio.h>
+#include "lib/parsers.h"
 
 const int HASH_TABLE_SIZE = 50000;
 
 void get_packets(pcap_t *handler);
-void ip_parser(const package packet, flow_base_t *flow);
-void tcp_parser(const package segment, flow_base_t *flow);
-void udp_parser(const package segment, flow_base_t *flow);
-flow_base_t flow_parser(const package packet, const package segment,
-                        const package payload);
-int count_nodes(const HashTable table);
 
 int main() {
 
@@ -53,25 +44,31 @@ void get_packets(pcap_t *handler) {
 
     //--------------------------------------------------------------------------
     const package packet = link_dissect(frame);
-    if (packet.header_pointer == false) {
+    if (packet.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
     const package segment = network_dissect(packet);
-    if (segment.header_pointer == false) {
+    if (segment.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
     const package payload = transport_demux(segment);
-    if (payload.header_pointer == false) {
+    if (payload.is_valid == false) {
       goto END;
     }
 
     // insert to hash table
-    const flow_base_t flow = flow_parser(packet, segment, payload);
+    flow_base_t flow = flow_parser(packet, segment, payload);
     uint64_t id_key = flow.sip.s_addr + flow.dip.s_addr - flow.sp + flow.dp;
+
+    // get insert time
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    flow.startts = tv;
+
     insert(table, id_key, flow);
 
   END:
@@ -81,68 +78,4 @@ void get_packets(pcap_t *handler) {
   // print table
   printHashTable(table);
   printf("table size: %d\n", count_nodes(table));
-}
-
-void ip_parser(const package packet, flow_base_t *flow) {
-
-  const struct ip *ip_header = (struct ip *)packet.header_pointer;
-
-  (*flow).sip = ip_header->ip_src;
-  (*flow).dip = ip_header->ip_dst;
-}
-
-void tcp_parser(const package segment, flow_base_t *flow) {
-
-  const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
-
-  (*flow).sp = ntohs(tcp_header->source);
-  (*flow).dp = ntohs(tcp_header->dest);
-}
-
-void udp_parser(const package segment, flow_base_t *flow) {
-
-  const struct udphdr *udp_header = (struct udphdr *)segment.header_pointer;
-
-  (*flow).sp = ntohs(udp_header->source);
-  (*flow).dp = ntohs(udp_header->dest);
-}
-
-flow_base_t flow_parser(const package packet, const package segment,
-                        const package payload) {
-
-  flow_base_t flow;
-  ip_parser(packet, &flow);
-
-  /** // print IP addresses */
-  /** printf("Source IP: %s\n", inet_ntoa(flow.sip)); */
-  /** printf("Destination IP: %s\n", inet_ntoa(flow.dip)); */
-
-  if (segment.type == IPPROTO_TCP) {
-    tcp_parser(segment, &flow);
-    /** printf("Source port: %d\n", flow.sp); */
-    /** printf("Destination port: %d\n", flow.dp); */
-
-  } else if (segment.type == IPPROTO_UDP) {
-    udp_parser(segment, &flow);
-    /** printf("Source port: %d\n", flow.sp); */
-    /** printf("Destination port: %d\n", flow.dp); */
-  }
-
-  return flow;
-}
-
-int count_nodes(const HashTable table) {
-
-  int count = 0;
-  Node *temp;
-
-  for (int i = 0; i < HASH_TABLE_SIZE; i++) {
-    temp = table.lists[i];
-    while (temp != NULL) {
-
-      count++;
-      temp = temp->next;
-    }
-  }
-  return count;
 }

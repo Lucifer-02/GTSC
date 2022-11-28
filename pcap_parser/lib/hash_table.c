@@ -48,18 +48,6 @@ Node *search(HashTable table, uint key) {
   return NULL;
 }
 
-/** // print search result */
-/** void printSearchResult(const Node *node) { */
-/**   if (node == NULL) { */
-/**     printf("key not found\n"); */
-/**   } else { */
-/**     for (const Node *current = node; current != NULL; current =
- * current->next) { */
-/**       printf("key: %d, value: %c\n", current->key, current->value); */
-/**     } */
-/**   } */
-/** } */
-
 // free list of node
 void freeList(Node *node) {
   if (node == NULL) {
@@ -130,4 +118,21 @@ void print_list(const Node *head) {
 
     head = head->next;
   }
+}
+
+// get number of nodes in hashtable
+int count_nodes(const HashTable table) {
+
+  int count = 0;
+  Node *temp;
+
+  for (size_t i = 0; i < table.size; i++) {
+    temp = table.lists[i];
+    while (temp != NULL) {
+
+      count++;
+      temp = temp->next;
+    }
+  }
+  return count;
 }
