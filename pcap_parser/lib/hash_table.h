@@ -25,10 +25,16 @@ void print_hashtable(const HashTable table);
 int count_nodes(const HashTable table);
 void print_flows(const Node *head);
 // insert a new flow into the hash table
-void flow_insert(HashTable table, const uint64_t key, flow_base_t flow);
-
+void flow_insert(HashTable table, const uint64_t key, const flow_base_t flow);
+// search for a flow with the given key
+flow_base_t *flow_search(const HashTable table, const uint64_t key);
+// print a flow
+void print_flow(const flow_base_t flow);
+// delete a flow with the given key
+void remove_flow(HashTable table, const uint key);
+// create a new flow node
+Node *new_flow_node(const uint64_t key, const flow_base_t flow);
+// search for a flow node with the given key
 flow_base_t *flow_search(const HashTable table, const uint64_t key);
 
-void print_flow(const flow_base_t flow);
-void remove_flow(HashTable table, const uint key);
 #endif

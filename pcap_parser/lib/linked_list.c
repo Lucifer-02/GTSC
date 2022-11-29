@@ -3,34 +3,20 @@
 #include <pcap.h>
 #include <string.h>
 
-// Create a new node
-Node *new_node(const uint64_t key, void *value) {
-  Node *n = malloc(sizeof(Node));
-  // allocate memory for value
-  n->value = malloc(sizeof(flow_base_t));
-  // copy value to the new node
-  memcpy(n->value, value, sizeof(flow_base_t));
-  n->key = key;
-  n->next = NULL;
-  return n;
-}
-
 // Insert a new node into the list
-void insert_node(Node **head, const uint64_t key, void *value) {
-  // Create a new node
-  Node *node = new_node(key, value);
+void insert_node(Node **head, Node *new_node) {
 
   // Insert the node at the end of the list
   Node *current = *head;
 
   if (current == NULL) {
     printf("current is null\n");
-    *head = node;
+    *head = new_node;
   } else {
     while (current->next != NULL) {
       current = current->next;
     }
-    current->next = node;
+    current->next = new_node;
   }
 }
 

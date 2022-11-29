@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 // hash function
 uint hash(uint64_t x, size_t len) {
@@ -18,17 +19,34 @@ HashTable newHashTable(const size_t size) {
 }
 
 // insert a new Node into the hash table
-void flow_insert(HashTable table, const uint64_t key, flow_base_t flow) {
+void flow_insert(HashTable table, const uint64_t key, const flow_base_t flow) {
 
   uint index = hash(key, table.size);
 
-  insert_node(&table.lists[index], key, &flow);
+  insert_node(&table.lists[index], new_flow_node(key, flow));
+}
+
+Node *new_flow_node(const uint64_t key, const flow_base_t flow) {
+
+  Node *const node = malloc(sizeof(Node));
+  // allocate memory for value
+  node->value = malloc(sizeof(flow_base_t));
+  // copy value to the new node
+  memcpy(node->value, &flow, sizeof(flow_base_t));
+
+  node->key = key;
+  node->next = NULL;
+  return node;
 }
 
 // search flow by a key in the hash table and return the flow
 flow_base_t *flow_search(const HashTable table, const uint64_t key) {
   uint index = hash(key, table.size);
   Node *head_flow = table.lists[index];
+
+  if (head_flow == NULL) {
+    return NULL;
+  }
 
   Node *n = search_node(head_flow, key);
 
@@ -38,7 +56,10 @@ flow_base_t *flow_search(const HashTable table, const uint64_t key) {
 // free hash table
 void freeHashTable(HashTable table) {
   for (uint i = 0; i < table.size; i++) {
-    free_list(table.lists[i]);
+    Node *head_flow = table.lists[i];
+    if (head_flow != NULL) {
+      free_list(head_flow);
+    }
   }
   free(table.lists);
 }
@@ -47,6 +68,10 @@ void freeHashTable(HashTable table) {
 void remove_flow(HashTable table, const uint key) {
   uint index = hash(key, table.size);
   Node *head = table.lists[index];
+
+  if (head == NULL) {
+    return;
+  }
 
   delete_node(head, key);
 }

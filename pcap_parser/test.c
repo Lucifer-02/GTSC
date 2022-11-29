@@ -4,7 +4,7 @@
 #include "lib/linked_list.h"
 #include "lib/parsers.h"
 
-const int HASH_TABLE_SIZE = 10;
+const int HASH_TABLE_SIZE = 50;
 
 void get_packets(pcap_t *handler);
 
@@ -65,6 +65,7 @@ void get_packets(pcap_t *handler) {
       goto END;
     }
 
+
     // insert to hash table
     flow_base_t flow = flow_parser(packet, segment, payload);
     uint64_t id_key = flow.sip.s_addr + flow.dip.s_addr - flow.sp + flow.dp;
@@ -75,17 +76,9 @@ void get_packets(pcap_t *handler) {
     printf("-------------------------------------------------------------------"
            "----\n");
   }
-  remove_flow(table, 1024182289);
-  // search a flow in hash table
-  const flow_base_t *flow = flow_search(table, 124182289);
-  // check NULL
-  if (flow == NULL) {
-    printf("Not found flow!!!\n");
-    return;
-  }
 
-  print_flow(*flow);
+  print_hashtable(table);
+  printf("number of flows: %d\n", count_nodes(table));
 
-  /** print_hashtable(table); */
-  /** printf("number of flows: %d\n", count_nodes(table)); */
+  freeHashTable(table);
 }
