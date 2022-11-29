@@ -14,6 +14,9 @@ void tcp_parser(const package segment, flow_base_t *flow) {
 
   (*flow).sp = ntohs(tcp_header->source);
   (*flow).dp = ntohs(tcp_header->dest);
+  
+  // get sequence number
+  (*flow).exp_seq_down = ntohl(tcp_header->seq);
 }
 
 void udp_parser(const package segment, flow_base_t *flow) {

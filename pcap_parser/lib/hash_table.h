@@ -2,16 +2,11 @@
 #define HASH_TABLE_H
 
 #include "flow_api.h"
+#include "linked_list.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-typedef struct Node {
-  uint64_t key;
-  flow_base_t value;
-  struct Node *next;
-} Node;
 
 typedef struct {
   size_t size;
@@ -19,24 +14,21 @@ typedef struct {
 } HashTable;
 
 // Hash function
-uint hash(uint64_t x, size_t len);
+uint hash(const uint64_t x, const size_t len);
 // create a new hash table
-HashTable newHashTable(size_t size);
-// search for a key in the hash table, return list of node
-Node *search(HashTable table, uint key);
-// free list of node
-void freeList(Node *node);
+HashTable newHashTable(const size_t size);
 // free hash table
 void freeHashTable(HashTable table);
-// remove a node from the hash table
-void removeNode(HashTable table, uint key);
-// insert a new key-value pair into the hash table
-void insert(HashTable table, uint key, flow_base_t value);
 // print the hash table
-void printHashTable(const HashTable table);
-// print all node in list
-void print_list(const Node *head);
+void print_hashtable(const HashTable table);
 // get number of node in hash table
 int count_nodes(const HashTable table);
+void print_flows(const Node *head);
+// insert a new flow into the hash table
+void flow_insert(HashTable table, const uint64_t key, flow_base_t flow);
 
+flow_base_t *flow_search(const HashTable table, const uint64_t key);
+
+void print_flow(const flow_base_t flow);
+void remove_flow(HashTable table, const uint key);
 #endif

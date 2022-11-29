@@ -1,9 +1,10 @@
 #include "lib/dissection.h"
 #include "lib/flow_api.h"
 #include "lib/hash_table.h"
+#include "lib/linked_list.h"
 #include "lib/parsers.h"
 
-const int HASH_TABLE_SIZE = 50000;
+const int HASH_TABLE_SIZE = 10;
 
 void get_packets(pcap_t *handler);
 
@@ -14,6 +15,10 @@ int main() {
 
   // open file and create pcap handler
   pcap_t *const handler = pcap_open_offline("sample.pcap", errbuff);
+  if (handler == NULL) {
+    fprintf(stderr, "Error opening file: %s\n", errbuff);
+    exit(EXIT_FAILURE);
+  }
   get_packets(handler);
   pcap_close(handler);
   return 0;
@@ -64,18 +69,23 @@ void get_packets(pcap_t *handler) {
     flow_base_t flow = flow_parser(packet, segment, payload);
     uint64_t id_key = flow.sip.s_addr + flow.dip.s_addr - flow.sp + flow.dp;
 
-    // get insert time
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    flow.startts = tv;
-
-    insert(table, id_key, flow);
+    flow_insert(table, id_key, flow);
 
   END:
     printf("-------------------------------------------------------------------"
            "----\n");
   }
-  // print table
-  printHashTable(table);
-  printf("table size: %d\n", count_nodes(table));
+  remove_flow(table, 1024182289);
+  // search a flow in hash table
+  const flow_base_t *flow = flow_search(table, 124182289);
+  // check NULL
+  if (flow == NULL) {
+    printf("Not found flow!!!\n");
+    return;
+  }
+
+  print_flow(*flow);
+
+  /** print_hashtable(table); */
+  /** printf("number of flows: %d\n", count_nodes(table)); */
 }
