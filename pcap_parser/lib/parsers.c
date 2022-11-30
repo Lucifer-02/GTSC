@@ -1,52 +1,45 @@
 #include "parsers.h"
 
-void ip_parser(const package packet, flow_base_t *flow) {
+struct parsed_packet pkt_parser(const package packet, const package segment,
+                                 const package payload) {
+
+  struct parsed_packet pkt;
 
   const struct ip *ip_header = (struct ip *)packet.header_pointer;
 
-  (*flow).sip = ip_header->ip_src;
-  (*flow).dip = ip_header->ip_dst;
-}
-
-void tcp_parser(const package segment, flow_base_t *flow) {
-
-  const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
-
-  (*flow).sp = ntohs(tcp_header->source);
-  (*flow).dp = ntohs(tcp_header->dest);
-  
-  // get sequence number
-  (*flow).exp_seq_down = ntohl(tcp_header->seq);
-}
-
-void udp_parser(const package segment, flow_base_t *flow) {
-
-  const struct udphdr *udp_header = (struct udphdr *)segment.header_pointer;
-
-  (*flow).sp = ntohs(udp_header->source);
-  (*flow).dp = ntohs(udp_header->dest);
-}
-
-flow_base_t flow_parser(const package packet, const package segment,
-                        const package payload) {
-
-  flow_base_t flow;
-  ip_parser(packet, &flow);
+  pkt.src_ip = ip_header->ip_src;
+  pkt.dst_ip = ip_header->ip_dst;
 
   /** // print IP addresses */
-  /** printf("Source IP: %s\n", inet_ntoa(flow.sip)); */
-  /** printf("Destination IP: %s\n", inet_ntoa(flow.dip)); */
+  /** printf("Source IP: %s\n", inet_ntoa(pkt.src_ip)); */
+  /** printf("Destination IP: %s\n", inet_ntoa(pkt.dst_ip)); */
 
   if (segment.type == IPPROTO_TCP) {
-    tcp_parser(segment, &flow);
-    /** printf("Source port: %d\n", flow.sp); */
-    /** printf("Destination port: %d\n", flow.dp); */
+    const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
+
+    pkt.type = IPPROTO_TCP;
+    pkt.src_port = ntohs(tcp_header->source);
+    pkt.dst_port = ntohs(tcp_header->dest);
+    pkt.seq = ntohl(tcp_header->seq);
+    pkt.payload = payload.header_pointer;
+    pkt.payload_len = payload.package_size;
+
+    /** printf("Source port: %d\n", pkt.src_port); */
+    /** printf("Destination port: %d\n", pkt.dst_port); */
 
   } else if (segment.type == IPPROTO_UDP) {
-    udp_parser(segment, &flow);
-    /** printf("Source port: %d\n", flow.sp); */
-    /** printf("Destination port: %d\n", flow.dp); */
+    const struct udphdr *udp_header = (struct udphdr *)segment.header_pointer;
+
+    pkt.type = IPPROTO_UDP;
+    pkt.src_port = ntohs(udp_header->source);
+    pkt.dst_port = ntohs(udp_header->dest);
+    pkt.payload = payload.header_pointer;
+    pkt.payload_len = payload.package_size;
+	pkt.seq = NONE;
+
+    /** printf("Source port: %d\n", pkt.src_port); */
+    /** printf("Destination port: %d\n", pkt.dst_port); */
   }
 
-  return flow;
+  return pkt;
 }

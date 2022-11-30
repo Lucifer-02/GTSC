@@ -10,17 +10,17 @@ struct parsed_packet {
   in_port_t src_port;
   in_port_t dst_port;
 
+  // type
+  uint16_t type;
+
   // for tcp
   uint32_t seq;
 
-  char *payload;
+  const u_char *payload;
   uint payload_len;
 };
 
-void ip_parser(const package packet, flow_base_t *flow);
-void tcp_parser(const package segment, flow_base_t *flow);
-void udp_parser(const package segment, flow_base_t *flow);
-flow_base_t flow_parser(const package packet, const package segment,
-                        const package payload);
+struct parsed_packet pkt_parser(const package packet, const package segment,
+                                 const package payload);
 
 #endif

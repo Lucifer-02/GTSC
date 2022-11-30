@@ -58,18 +58,10 @@ flow_base_t *flow_search(const HashTable table, const uint64_t key) {
 // free hash table
 void freeHashTable(HashTable table) {
   for (uint i = 0; i < table.size; i++) {
-    Node *flow_temp = table.lists[i];
-    if (flow_temp != NULL) {
-
-      // free each package nodes in each flow
-      while (flow_temp != NULL) {
-        Node *tmp = flow_temp;
-        free_list(((flow_base_t *)tmp->value)->package_down);
-        flow_temp = flow_temp->next;
-      }
+    Node *head_flow = table.lists[i];
+    if (head_flow != NULL) {
+      free_list(head_flow);
     }
-    // free all flow nodes
-    free_list(table.lists[i]);
   }
   free(table.lists);
 }
@@ -121,26 +113,20 @@ void print_flow(const flow_base_t flow) {
   // print port
   printf("src port: %d,", flow.sp);
   printf("dst port: %d\n", flow.dp);
-
-  // print list of packets in the flow
-  Node *temp = flow.package_down;
-  while (temp != NULL) {
-
-    printf("    Packet: %ld\n", temp->key);
-    temp = temp->next;
-  }
 }
 
-// get number of flows in hashtable
-uint count_flows(const HashTable table) {
+// get number of nodes in hashtable
+int count_nodes(const HashTable table) {
 
   int count = 0;
   Node *temp;
 
   for (size_t i = 0; i < table.size; i++) {
     temp = table.lists[i];
-    uint list_size = get_list_size(temp);
-    count += list_size;
+    while (temp != NULL) {
+      count++;
+      temp = temp->next;
+    }
   }
   return count;
 }
@@ -157,24 +143,25 @@ void packet_insert(HashTable table, const struct parsed_packet pkt) {
   if (flow == NULL) {
     printf("flow not found, creating new one\n");
 
-    flow_base_t new_flow = create_flow(pkt);
-    insert_node(&(new_flow.package_down), new_packet_node(pkt));
-    flow_insert(table, flow_key, new_flow);
+    flow_base_t flow = new_flow(pkt);
+    flow_insert(table, flow_key, flow);
 
+    print_flow(flow);
   } else {
     printf("flow found, inserting to it\n");
-    insert_node(&(flow->package_down), new_packet_node(pkt));
+    insert_node(flow->package_down, new_packet_node(pkt));
   }
 }
 
 // create new flow
-flow_base_t create_flow(const struct parsed_packet pkt) {
+flow_base_t new_flow(const struct parsed_packet pkt) {
 
-  return (flow_base_t){.sip = pkt.src_ip,
-                       .dip = pkt.dst_ip,
-                       .sp = pkt.src_port,
-                       .dp = pkt.dst_port,
-                       .ip_proto = pkt.type};
+  return (flow_base_t){
+      .sip = pkt.src_ip,
+      .dip = pkt.dst_ip,
+      .sp = pkt.src_port,
+      .dp = pkt.dst_port,
+  };
 }
 
 // create new packet node
@@ -189,44 +176,4 @@ Node *new_packet_node(const struct parsed_packet pkt) {
   node->key = pkt.seq;
   node->next = NULL;
   return node;
-}
-
-// Get number of packets in hash table
-uint count_packets(const HashTable table) {
-
-  int count = 0;
-  const Node *flow_temp;
-
-  for (size_t i = 0; i < table.size; i++) {
-    flow_temp = table.lists[i];
-    while (flow_temp != NULL) {
-
-      Node *packet_temp = ((flow_base_t *)flow_temp->value)->package_down;
-
-      uint list_size = get_list_size(packet_temp);
-
-      count += list_size;
-
-      flow_temp = flow_temp->next;
-    }
-  }
-  return count;
-}
-
-// remove packet from the hash table
-void remove_packet(HashTable table, const uint key) {
-  uint index = hash(key, table.size);
-  Node *head = table.lists[index];
-
-  if (head == NULL) {
-    return;
-  }
-
-  Node *flow = search_node(head, key);
-
-  if (flow == NULL) {
-    return;
-  }
-
-  delete_node(((flow_base_t *)flow->value)->package_down, key);
 }

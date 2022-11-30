@@ -18,5 +18,10 @@ Node *search_node(const Node *head, const uint64_t key);
 void delete_node(Node *head, const uint64_t key);
 // Free all nodes in the list
 void free_list(Node *head);
+// free node
+void free_node(Node *node);
+
+// Get number of nodes in the list
+uint get_list_size(const Node *head);
 
 #endif

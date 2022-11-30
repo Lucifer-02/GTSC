@@ -60,8 +60,8 @@ typedef struct __flow_base_s {
   u_int exp_seq_up;   // direction up
   u_int exp_seq_down; // direction down
 
-  Node **package_up;
-  Node **package_down;
+  Node *package_up;
+  Node *package_down;
 
 } flow_base_t;
 

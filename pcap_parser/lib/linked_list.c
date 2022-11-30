@@ -10,7 +10,6 @@ void insert_node(Node **head, Node *new_node) {
   Node *current = *head;
 
   if (current == NULL) {
-    printf("current is null\n");
     *head = new_node;
   } else {
     while (current->next != NULL) {
@@ -22,12 +21,12 @@ void insert_node(Node **head, Node *new_node) {
 
 // Search for a node with the given key
 Node *search_node(const Node *head, const uint64_t key) {
-  Node *n = head->next;
-  while (n != NULL) {
-    if (n->key == key) {
-      return n;
+  const Node *current = head;
+  while (current != NULL) {
+    if (current->key == key) {
+      return (Node *)current;
     }
-    n = n->next;
+    current = current->next;
   }
   return NULL;
 }
@@ -38,21 +37,39 @@ void delete_node(Node *head, uint64_t key) {
   while (n->next != NULL) {
     if (n->next->key == key) {
       Node *tmp = n->next;
-      n->next = n->next->next;
-      free(tmp);
+      n->next = tmp->next;
+      free_node(tmp);
+      printf("Delete success\n");
       return;
     }
     n = n->next;
   }
+  printf("Node with key %lu not found\n", key);
 }
 
 // Free all nodes in the list
 void free_list(Node *head) {
-  Node *n = head->next;
+  Node *n = head;
   while (n != NULL) {
     Node *tmp = n;
     n = n->next;
-    free(tmp);
+    free_node(tmp);
   }
-  free(head);
+}
+
+// free node
+void free_node(Node *node) {
+  free(node->value);
+  free(node);
+}
+
+// Get number of nodes in the list
+uint get_list_size(const Node *head) {
+  uint size = 0;
+  const Node *n = head;
+  while (n != NULL) {
+    size++;
+    n = n->next;
+  }
+  return size;
 }

@@ -3,6 +3,8 @@
 
 #include "flow_api.h"
 #include "linked_list.h"
+#include "parsers.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -22,7 +24,7 @@ void freeHashTable(HashTable table);
 // print the hash table
 void print_hashtable(const HashTable table);
 // get number of node in hash table
-int count_nodes(const HashTable table);
+uint count_flows(const HashTable table);
 void print_flows(const Node *head);
 // insert a new flow into the hash table
 void flow_insert(HashTable table, const uint64_t key, const flow_base_t flow);
@@ -36,5 +38,13 @@ void remove_flow(HashTable table, const uint key);
 Node *new_flow_node(const uint64_t key, const flow_base_t flow);
 // search for a flow node with the given key
 flow_base_t *flow_search(const HashTable table, const uint64_t key);
+// create new flow
+flow_base_t create_flow(const struct parsed_packet pkt);
+// Insert packet into the hash table
+void packet_insert(HashTable table, const struct parsed_packet pkt);
+// create new packet node
+Node *new_packet_node(const struct parsed_packet pkt);
+// Get number of packets in hash table
+uint count_packets(const HashTable table);
 
 #endif

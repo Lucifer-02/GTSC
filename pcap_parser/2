@@ -3,7 +3,6 @@
 #include "lib/hash_table.h"
 #include "lib/linked_list.h"
 #include "lib/parsers.h"
-#include <stdio.h>
 
 const int HASH_TABLE_SIZE = 50;
 
@@ -39,7 +38,6 @@ void get_packets(pcap_t *handler) {
   HashTable table = newHashTable(HASH_TABLE_SIZE);
 
   while (pcap_next_ex(handler, &header, &packet) >= 0) {
-
     // Show the packet number
     printf("Packet # %i\n", ++packetCount);
 
@@ -68,17 +66,19 @@ void get_packets(pcap_t *handler) {
     }
 
     // insert to hash table
-    struct parsed_packet pkt = pkt_parser(packet, segment, payload);
-    packet_insert(table, pkt);
+    flow_base_t flow = flow_parser(packet, segment, payload);
+    uint64_t id_key = flow.sip.s_addr + flow.dip.s_addr - flow.sp + flow.dp;
+
+    flow_insert(table, id_key, flow);
 
   END:
     printf("-------------------------------------------------------------------"
            "----\n");
   }
 
-  /** print_hashtable(table); */
-  /** printf("number of flows: %d\n", count_flows(table)); */
-  /** printf("Number of packets: %d\n", count_packets(table)); */
+  remove_flow(table, 1158457760);
+  print_hashtable(table);
+  printf("number of flows: %d\n", count_nodes(table));
 
   freeHashTable(table);
 }
