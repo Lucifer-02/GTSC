@@ -76,9 +76,9 @@ void get_packets(pcap_t *handler) {
            "----\n");
   }
 
-  /** print_hashtable(table); */
-  /** printf("number of flows: %d\n", count_flows(table)); */
-  /** printf("Number of packets: %d\n", count_packets(table)); */
+  print_hashtable(table);
+  printf("number of flows: %d\n", count_flows(table));
+  printf("Number of packets: %d\n", count_packets(table));
 
   freeHashTable(table);
 }

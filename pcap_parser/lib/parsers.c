@@ -1,4 +1,5 @@
 #include "parsers.h"
+#include <stdint.h>
 
 struct parsed_packet pkt_parser(const package packet, const package segment,
                                  const package payload) {
@@ -17,12 +18,13 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
   if (segment.type == IPPROTO_TCP) {
     const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
 
+    /** pkt.type = (uint16_t)IPPROTO_TCP; */
     pkt.type = IPPROTO_TCP;
     pkt.src_port = ntohs(tcp_header->source);
     pkt.dst_port = ntohs(tcp_header->dest);
     pkt.seq = ntohl(tcp_header->seq);
-    pkt.payload = payload.header_pointer;
-    pkt.payload_len = payload.package_size;
+    pkt.payload.data = payload.header_pointer;
+    pkt.payload.data_len = payload.package_size;
 
     /** printf("Source port: %d\n", pkt.src_port); */
     /** printf("Destination port: %d\n", pkt.dst_port); */
@@ -33,8 +35,8 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
     pkt.type = IPPROTO_UDP;
     pkt.src_port = ntohs(udp_header->source);
     pkt.dst_port = ntohs(udp_header->dest);
-    pkt.payload = payload.header_pointer;
-    pkt.payload_len = payload.package_size;
+    pkt.payload.data = payload.header_pointer;
+    pkt.payload.data_len = payload.package_size;
 	pkt.seq = NONE;
 
     /** printf("Source port: %d\n", pkt.src_port); */

@@ -65,6 +65,7 @@ void freeHashTable(HashTable table) {
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
         free_list(((flow_base_t *)tmp->value)->package_down);
+        free_list(((flow_base_t *)tmp->value)->package_up);
         flow_temp = flow_temp->next;
       }
     }
@@ -126,7 +127,14 @@ void print_flow(const flow_base_t flow) {
   Node *temp = flow.package_down;
   while (temp != NULL) {
 
-    printf("    Packet: %ld\n", temp->key);
+    printf("    DOWN Packet: %ld\n", temp->key);
+    temp = temp->next;
+  }
+
+  temp = flow.package_up;
+  while (temp != NULL) {
+
+    printf("    UP Packet: %ld\n", temp->key);
     temp = temp->next;
   }
 }
@@ -149,7 +157,7 @@ uint count_flows(const HashTable table) {
 void packet_insert(HashTable table, const struct parsed_packet pkt) {
 
   uint64_t flow_key =
-      pkt.src_ip.s_addr + pkt.dst_ip.s_addr - pkt.src_port + pkt.dst_port;
+      pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.src_port + pkt.dst_port;
 
   // flow in hash table
   flow_base_t *flow = flow_search(table, flow_key);
@@ -158,12 +166,26 @@ void packet_insert(HashTable table, const struct parsed_packet pkt) {
     printf("flow not found, creating new one\n");
 
     flow_base_t new_flow = create_flow(pkt);
-    insert_node(&(new_flow.package_down), new_packet_node(pkt));
+    insert_to_flow(&new_flow, pkt);
     flow_insert(table, flow_key, new_flow);
 
   } else {
     printf("flow found, inserting to it\n");
-    insert_node(&(flow->package_down), new_packet_node(pkt));
+    insert_to_flow(flow, pkt);
+  }
+}
+
+void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt) {
+  Node **temp = get_flow_up_down(flow, pkt);
+  insert_node(temp, new_packet_node(pkt));
+}
+
+// get header of up or down flow
+Node **get_flow_up_down(flow_base_t *flow, const struct parsed_packet pkt) {
+  if (pkt.src_port - pkt.dst_port >= 0) {
+    return &(flow->package_up);
+  } else {
+    return &(flow->package_down);
   }
 }
 
@@ -182,9 +204,9 @@ Node *new_packet_node(const struct parsed_packet pkt) {
 
   Node *const node = malloc(sizeof(Node));
   // allocate memory for value
-  node->value = malloc(sizeof(struct parsed_packet));
+  node->value = malloc(sizeof(struct parsed_payload));
   // copy value to the new node
-  memcpy(node->value, &pkt, sizeof(struct parsed_packet));
+  memcpy(node->value, &pkt, sizeof(struct parsed_payload));
 
   node->key = pkt.seq;
   node->next = NULL;
@@ -201,11 +223,13 @@ uint count_packets(const HashTable table) {
     flow_temp = table.lists[i];
     while (flow_temp != NULL) {
 
-      Node *packet_temp = ((flow_base_t *)flow_temp->value)->package_down;
+      Node *packet_down_temp = ((flow_base_t *)flow_temp->value)->package_down;
+      Node *packet_up_temp = ((flow_base_t *)flow_temp->value)->package_up;
 
-      uint list_size = get_list_size(packet_temp);
+      uint list_down_size = get_list_size(packet_down_temp);
+      uint list_up_size = get_list_size(packet_up_temp);
 
-      count += list_size;
+      count += list_down_size + list_up_size;
 
       flow_temp = flow_temp->next;
     }

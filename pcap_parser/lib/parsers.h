@@ -4,7 +4,14 @@
 #include "dissection.h"
 #include "flow_api.h"
 
+struct parsed_payload {
+  const u_char *data;
+  uint data_len;
+};
+
 struct parsed_packet {
+
+  // currently only used for IPv4
   struct in_addr src_ip;
   struct in_addr dst_ip;
   in_port_t src_port;
@@ -16,11 +23,10 @@ struct parsed_packet {
   // for tcp
   uint32_t seq;
 
-  const u_char *payload;
-  uint payload_len;
+  struct parsed_payload payload;
 };
 
 struct parsed_packet pkt_parser(const package packet, const package segment,
-                                 const package payload);
+                                const package payload);
 
 #endif
