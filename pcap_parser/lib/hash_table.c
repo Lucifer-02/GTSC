@@ -106,7 +106,7 @@ void print_flows(const Node *const head) {
   const Node *scaner = head;
 
   while (scaner != NULL) {
-    printf("Key: %lu, ", scaner->key);
+    printf("Key: %lu:\n", scaner->key);
     print_flow(*(flow_base_t *)scaner->value);
 
     scaner = scaner->next;
@@ -116,26 +116,30 @@ void print_flows(const Node *const head) {
 // print flow node
 void print_flow(const flow_base_t flow) {
   // print ip addresses
-  printf("src ip: %s,", inet_ntoa(flow.sip));
-  printf("dst ip: %s,", inet_ntoa(flow.dip));
+  printf("\t|ip: %s,", inet_ntoa(flow.sip));
+  printf("ip: %s,", inet_ntoa(flow.dip));
 
   // print port
-  printf("src port: %d,", flow.sp);
-  printf("dst port: %d\n", flow.dp);
+  printf("port: %d, ", flow.sp);
+  printf("port: %d\n", flow.dp);
+
+  // print expected sequence number
+  printf("\t|expected seq DOWN: %u, ", flow.exp_seq_down);
+  printf("expected seq UP: %u\n", flow.exp_seq_up);
 
   // print list of packets in the flow
-  Node *temp = flow.package_down;
-  while (temp != NULL) {
+  Node *temp_down = flow.package_down;
+  while (temp_down != NULL) {
 
-    printf("    DOWN Packet: %ld\n", temp->key);
-    temp = temp->next;
+    printf("\t\t[DOWN] seq: %ld\n", temp_down->key);
+    temp_down = temp_down->next;
   }
 
-  temp = flow.package_up;
-  while (temp != NULL) {
+  Node *temp_up = flow.package_up;
+  while (temp_up != NULL) {
 
-    printf("    UP Packet: %ld\n", temp->key);
-    temp = temp->next;
+    printf("\t\t[UP] seq: %ld\n", temp_up->key);
+    temp_up = temp_up->next;
   }
 }
 
@@ -176,16 +180,18 @@ void packet_insert(HashTable table, const struct parsed_packet pkt) {
 }
 
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt) {
-  Node **temp = get_flow_up_down(flow, pkt);
-  insert_node(temp, new_packet_node(pkt));
-}
+  // determine direction of the packet with respect to the flow
+  if (pkt.src_ip.s_addr == flow->sip.s_addr) {
+    if (pkt.type == IPPROTO_TCP) {
+      flow->exp_seq_down = pkt.seq + pkt.payload.data_len;
+    }
+    insert_node(&flow->package_down, new_packet_node(pkt));
 
-// get header of up or down flow
-Node **get_flow_up_down(flow_base_t *flow, const struct parsed_packet pkt) {
-  if (pkt.src_port - pkt.dst_port >= 0) {
-    return &(flow->package_up);
   } else {
-    return &(flow->package_down);
+    if (pkt.type == IPPROTO_TCP) {
+      flow->exp_seq_up = pkt.seq + pkt.payload.data_len;
+    }
+    insert_node(&flow->package_up, new_packet_node(pkt));
   }
 }
 

@@ -48,7 +48,5 @@ Node *new_packet_node(const struct parsed_packet pkt);
 uint count_packets(const HashTable table);
 // Insert a packet into a flow
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt);
-// get header of up or down flow
-Node **get_flow_up_down(flow_base_t *flow, const struct parsed_packet pkt);
 
 #endif
