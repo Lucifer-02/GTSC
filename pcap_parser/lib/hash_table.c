@@ -116,16 +116,16 @@ void print_flows(const Node *const head) {
 // print flow node
 void print_flow(const flow_base_t flow) {
   // print ip addresses
-  printf("\t|ip: %s,", inet_ntoa(flow.sip));
-  printf("ip: %s,", inet_ntoa(flow.dip));
+  printf("\t|ip: %s", inet_ntoa(flow.sip));
+  printf(" <=> %s, ", inet_ntoa(flow.dip));
 
   // print port
-  printf("port: %d, ", flow.sp);
-  printf("port: %d\n", flow.dp);
+  printf("port: %d", flow.sp);
+  printf(" <=> %d\n", flow.dp);
 
   // print expected sequence number
-  printf("\t|expected seq DOWN: %u, ", flow.exp_seq_down);
-  printf("expected seq UP: %u\n", flow.exp_seq_up);
+  printf("\t|exp seq DOWN: %u, ", flow.exp_seq_down);
+  printf("exp seq UP: %u\n", flow.exp_seq_up);
 
   // print list of packets in the flow
   Node *temp_down = flow.package_down;
