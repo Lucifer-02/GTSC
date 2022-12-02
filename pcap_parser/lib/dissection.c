@@ -1,8 +1,7 @@
 #include "dissection.h"
 
 // Dessection of ethernet frame, return a frame
-package frame_dissect(const u_char *packet,
-                             const struct pcap_pkthdr *header) {
+package frame_dissect(const u_char *packet, const struct pcap_pkthdr *header) {
 
   /** // Show the size in bytes of the package */
   /** printf("Packet size: %d bytes\n", header->len); */
@@ -16,9 +15,9 @@ package frame_dissect(const u_char *packet,
   const struct ether_header *ethernet = (struct ether_header *)(packet);
 
   return (package){.header_pointer = (u_char *)ethernet,
-                          .package_size = header->len,
-                          .type = ethernet->ether_type,
-                          .is_valid = true};
+                   .package_size = header->len,
+                   .type = ethernet->ether_type,
+                   .is_valid = true};
 }
 
 // Dessection of link layer, currently only IPv4, recieves ethernet frame and
@@ -32,9 +31,9 @@ package link_dissect(const package ethernet_packet) {
         ethernet_packet.package_size - ETHERNET_HEADER_SIZE;
 
     return (package){.header_pointer = ip_pointer,
-                            .package_size = ip_packet_size,
-                            .type = ((struct ip *)ip_pointer)->ip_p,
-                            .is_valid = true};
+                     .package_size = ip_packet_size,
+                     .type = ((struct ip *)ip_pointer)->ip_p,
+                     .is_valid = true};
   }
 
   printf("Not an IPv4\n");
@@ -71,9 +70,9 @@ package network_dissect(const package packet) {
 
     const int segment_size = packet.package_size - ip_header_size;
     return (package){.header_pointer = (u_char *)tcp,
-                            .package_size = segment_size,
-                            .type = IPPROTO_TCP,
-                            .is_valid = true};
+                     .package_size = segment_size,
+                     .type = IPPROTO_TCP,
+                     .is_valid = true};
 
   } else if (ip->ip_p == IPPROTO_UDP) {
 
@@ -137,16 +136,16 @@ package tcp_dissect(const package segment) {
   // get payload size
   const int payload_size = segment.package_size - tcp_header_size;
   return (package){.header_pointer = payload,
-                          .package_size = payload_size,
-                          .type = NONE,
-                          .is_valid = true};
+                   .package_size = payload_size,
+                   .type = NONE,
+                   .is_valid = true};
 }
 
 // Dessection of UDP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
 package udp_dissect(const package segment) {
 
-  const struct udphdr *udp = (struct udphdr *)segment.header_pointer;
+  /** const struct udphdr *udp = (struct udphdr *)segment.header_pointer; */
 
   /** // print source and destination port */
   /** printf("Src port: %d\n", ntohs(udp->uh_sport)); */
@@ -161,9 +160,9 @@ package udp_dissect(const package segment) {
 
   // print length of payload + checksum
   return (package){.header_pointer = payload,
-                          .package_size = payload_size,
-                          .type = NONE,
-                          .is_valid = true};
+                   .package_size = payload_size,
+                   .type = NONE,
+                   .is_valid = true};
 }
 
 /*
