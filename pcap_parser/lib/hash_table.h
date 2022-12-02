@@ -17,36 +17,36 @@ typedef struct {
 
 // Hash function
 uint hash(const uint64_t x, const size_t len);
-// create a new hash table
-HashTable newHashTable(const size_t size);
-// free hash table
-void freeHashTable(HashTable table);
-// print the hash table
-void print_hashtable(const HashTable table);
-// get number of node in hash table
-uint count_flows(const HashTable table);
-void print_flows(const Node *head);
+HashTable create_hash_table(const size_t size);
+Node *create_flow_node(const uint64_t key, const flow_base_t flow);
+Node *create_packet_node(const struct parsed_packet pkt);
+flow_base_t create_flow(const struct parsed_packet pkt);
+void free_hash_table(HashTable table);
 // insert a new flow into the hash table
 void flow_insert(HashTable table, const uint64_t key, const flow_base_t flow);
-// search for a flow with the given key
-flow_base_t *flow_search(const HashTable table, const uint64_t key);
-// print a flow
-void print_flow(const flow_base_t flow);
-// delete a flow with the given key
-void remove_flow(HashTable table, const uint key);
-// create a new flow node
-Node *new_flow_node(const uint64_t key, const flow_base_t flow);
-// search for a flow node with the given key
-flow_base_t *flow_search(const HashTable table, const uint64_t key);
-// create new flow
-flow_base_t create_flow(const struct parsed_packet pkt);
-// Insert packet into the hash table
-void packet_insert(HashTable table, const struct parsed_packet pkt);
-// create new packet node
-Node *new_packet_node(const struct parsed_packet pkt);
-// Get number of packets in hash table
-uint count_packets(const HashTable table);
+// Insert a packet into the hash table
+void insert_packet(HashTable table, const struct parsed_packet pkt);
 // Insert a packet into a flow
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt);
+// search for a flow with the given key
+flow_base_t *search_flow(const HashTable table, const uint64_t key);
+// delete a flow with the given key
+void delete_flow(HashTable table, const uint64_t key);
+// Get number of packets in hash table
+uint count_packets(const HashTable table);
+// get number of flows in hash table
+uint count_flows(const HashTable table);
+void print_hashtable(const HashTable table);
+void print_flows(const Node *head);
+// print all packets in a flow
+void print_flow(const flow_base_t flow);
 
+Node **get_flow_direction(const flow_base_t *flow,
+                          const struct parsed_packet pkt);
+// get number of nodes in a flow
+uint get_flow_size(const flow_base_t *flow);
+
+// pop head packet node from a flow
+struct parsed_payload pop_head_payload(Node **flow_diection);
 #endif
+

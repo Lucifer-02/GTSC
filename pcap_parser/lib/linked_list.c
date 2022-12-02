@@ -3,22 +3,6 @@
 #include <pcap.h>
 #include <string.h>
 
-/** // Insert a new node into the list */
-/** void insert_node(Node **head, Node *new_node) { */
-/**  */
-/**   // Insert the node at the end of the list */
-/**   Node *current = *head; */
-/**  */
-/**   if (current == NULL) { */
-/**     *head = new_node; */
-/**   } else { */
-/**     while (current->next != NULL) { */
-/**       current = current->next; */
-/**     } */
-/**     current->next = new_node; */
-/**   } */
-/** } */
-
 // Search for a node with the given key
 Node *search_node(const Node *head, const uint64_t key) {
   const Node *current = head;
@@ -31,9 +15,19 @@ Node *search_node(const Node *head, const uint64_t key) {
   return NULL;
 }
 
-// Delete a node with the given key
-void delete_node(Node *head, uint64_t key) {
-  Node *n = head;
+// Delete a node in list with the given key include the head node
+void delete_node(Node **head, uint64_t key) {
+  Node *n = *head;
+  if (n == NULL) {
+    return;
+  }
+  printf("this 1\n");
+  if (n->key == key) {
+    Node *tmp = n;
+    *head = n->next;
+    free_node(tmp);
+    return;
+  }
   while (n->next != NULL) {
     if (n->next->key == key) {
       Node *tmp = n->next;
@@ -68,28 +62,43 @@ uint get_list_size(const Node *head) {
   uint size = 0;
   const Node *n = head;
   while (n != NULL) {
-    size++;
     n = n->next;
+    size++;
   }
   return size;
 }
 
-// insert and sort node by key in the list
-void insert_node(Node **head, Node *new_node) {
-  Node *current = *head;
-
-  if (current == NULL) {
-	*head = new_node;
-  } else {
-	if (current->key > new_node->key) {
-	  new_node->next = current;
-	  *head = new_node;
-	} else {
-	  while (current->next != NULL && current->next->key < new_node->key) {
-		current = current->next;
-	  }
-	  new_node->next = current->next;
-	  current->next = new_node;
-	}
+// insert node by order desc (key) in the list
+void insert_node(Node **head, Node *node) {
+  Node *n = *head;
+  if (n == NULL) {
+	*head = node;
+	return;
   }
+  if (n->key < node->key) {
+	node->next = n;
+	*head = node;
+	return;
+  }
+  while (n->next != NULL) {
+	if (n->next->key < node->key) {
+	  node->next = n->next;
+	  n->next = node;
+	  return;
+	}
+	n = n->next;
+  }
+  n->next = node;
+}
+
+
+
+// pop the first node in the list
+Node *pop_first_node(Node **head) {
+  Node *n = *head;
+  if (n == NULL) {
+	return NULL;
+  }
+  *head = n->next;
+  return n;
 }

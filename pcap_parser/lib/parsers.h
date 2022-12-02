@@ -21,7 +21,7 @@ struct parsed_packet {
   uint16_t type;
 
   // for tcp
-  uint32_t seq;
+  uint64_t seq;
 
   struct parsed_payload payload;
 };

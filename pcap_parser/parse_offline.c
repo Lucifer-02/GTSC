@@ -1,20 +1,13 @@
 #include "lib/dissection.h"
 #include "lib/flow_api.h"
 #include "lib/hash_table.h"
-
-#include <pcap.h>
-#include <stdint.h>
+#include "lib/linked_list.h"
+#include "lib/parsers.h"
 #include <stdio.h>
 
-const int HASH_TABLE_SIZE = 50000;
+const int HASH_TABLE_SIZE = 50;
 
 void get_packets(pcap_t *handler);
-void ip_parser(const package packet, flow_base_t *flow);
-void tcp_parser(const package segment, flow_base_t *flow);
-void udp_parser(const package segment, flow_base_t *flow);
-flow_base_t flow_parser(const package packet, const package segment,
-                        const package payload);
-int count_nodes(const HashTable table);
 
 int main() {
 
@@ -23,6 +16,10 @@ int main() {
 
   // open file and create pcap handler
   pcap_t *const handler = pcap_open_offline("sample.pcap", errbuff);
+  if (handler == NULL) {
+    fprintf(stderr, "Error opening file: %s\n", errbuff);
+    exit(EXIT_FAILURE);
+  }
   get_packets(handler);
   pcap_close(handler);
   return 0;
@@ -34,52 +31,62 @@ void get_packets(pcap_t *handler) {
   struct pcap_pkthdr *header;
 
   // The actual packet
-  const u_char *packet;
+  const u_char *full_packet;
 
   int packetCount = 0;
 
   // create hash table
-  HashTable table = newHashTable(HASH_TABLE_SIZE);
+  HashTable table = create_hash_table(HASH_TABLE_SIZE);
 
-  while (pcap_next_ex(handler, &header, &packet) >= 0) {
+  while (pcap_next_ex(handler, &header, &full_packet) >= 0) {
+
     // Show the packet number
     printf("Packet # %i\n", ++packetCount);
 
     //--------------------------------------------------------------------------
-    const package frame = frame_dissect(packet, header);
+    const package frame = frame_dissect(full_packet, header);
     if (frame.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
     const package packet = link_dissect(frame);
-    if (packet.is_valid== false) {
+    if (packet.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
     const package segment = network_dissect(packet);
-    if (segment.is_valid== false) {
+    if (segment.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
     const package payload = transport_demux(segment);
-    if (payload.is_valid== false) {
+    if (payload.is_valid == false) {
       goto END;
     }
 
     // insert to hash table
-    const flow_base_t flow = flow_parser(packet, segment, payload);
-    uint64_t id_key = flow.sip.s_addr + flow.dip.s_addr - flow.sp + flow.dp;
-    insert(table, id_key, flow);
+    struct parsed_packet pkt = pkt_parser(packet, segment, payload);
+    insert_packet(table, pkt);
 
   END:
     printf("-------------------------------------------------------------------"
            "----\n");
   }
-  // print table
-  print_hashtable(table);
-  printf("table size: %d\n", count_nodes(table));
-}
 
+  printf(
+      "data length: %d\n",
+      pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len);
+  printf(
+      "data length: %d\n",
+      pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len);
+
+  print_hashtable(table);
+
+  printf("number of flows: %d\n", count_flows(table));
+  printf("Number of packets: %d\n", count_packets(table));
+
+  free_hash_table(table);
+}

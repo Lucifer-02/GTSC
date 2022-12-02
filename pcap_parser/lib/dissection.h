@@ -21,9 +21,9 @@
 
 typedef struct {
   const u_char *header_pointer;
-  const int package_size;
-  const uint16_t type;
-  const bool is_valid;
+  const uint package_size;
+  uint16_t type;
+  bool is_valid;
 } package;
 
 package frame_dissect(const u_char *packet, const struct pcap_pkthdr *header);

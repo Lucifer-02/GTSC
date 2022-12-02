@@ -132,7 +132,6 @@ void delete_flow(HashTable table, const uint64_t key) {
 // Insert packet into the hash table
 void insert_packet(HashTable table, const struct parsed_packet pkt) {
 
-  printf("inserting packet \n");
   uint64_t flow_key =
       pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.src_port + pkt.dst_port;
 
