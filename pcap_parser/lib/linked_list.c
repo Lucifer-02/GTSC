@@ -69,35 +69,81 @@ uint get_list_size(const Node *head) {
 }
 
 // insert node by order desc (key) in the list
-void insert_node(Node **head, Node *node) {
+void insert_node_desc(Node **head, Node *node) {
   Node *n = *head;
   if (n == NULL) {
-	*head = node;
-	return;
+    *head = node;
+    return;
   }
   if (n->key < node->key) {
-	node->next = n;
-	*head = node;
-	return;
+    node->next = n;
+    *head = node;
+    return;
   }
   while (n->next != NULL) {
-	if (n->next->key < node->key) {
-	  node->next = n->next;
-	  n->next = node;
-	  return;
-	}
-	n = n->next;
+    if (n->next->key < node->key) {
+      node->next = n->next;
+      n->next = node;
+      return;
+    }
+    n = n->next;
   }
   n->next = node;
 }
 
+// insert node by order asc (key) in the list
+void insert_node_asc(Node **head, Node *node) {
+  Node *n = *head;
+  if (n == NULL) {
+    *head = node;
+    return;
+  }
+  if (n->key > node->key) {
+    node->next = n;
+    *head = node;
+    return;
+  }
+  while (n->next != NULL) {
+    if (n->next->key > node->key) {
+      node->next = n->next;
+      n->next = node;
+      return;
+    }
+    n = n->next;
+  }
+  n->next = node;
+}
 
+// insert end of list
+void insert_last_node(Node **head, Node *node) {
+
+  Node *n = *head;
+  if (n == NULL) {
+    *head = node;
+    return;
+  }
+  while (n->next != NULL) {
+    n = n->next;
+  }
+  n->next = node;
+}
+
+// insert head of list
+void insert_first_node(Node **head, Node *node) {
+  Node *n = *head;
+  if (n == NULL) {
+    *head = node;
+    return;
+  }
+  node->next = n;
+  *head = node;
+}
 
 // pop the first node in the list
 Node *pop_first_node(Node **head) {
   Node *n = *head;
   if (n == NULL) {
-	return NULL;
+    return NULL;
   }
   *head = n->next;
   return n;

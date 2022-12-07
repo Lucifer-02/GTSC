@@ -1,7 +1,9 @@
 #include "dissection.h"
+#include <sys/types.h>
 
 // Dessection of ethernet frame, return a frame
-package frame_dissect(const u_char *packet, const struct pcap_pkthdr *header) {
+package frame_dissector(const u_char *packet,
+                        const struct pcap_pkthdr *header) {
 
   /** // Show the size in bytes of the package */
   /** printf("Packet size: %d bytes\n", header->len); */
@@ -22,7 +24,7 @@ package frame_dissect(const u_char *packet, const struct pcap_pkthdr *header) {
 
 // Dessection of link layer, currently only IPv4, recieves ethernet frame and
 // return packet
-package link_dissect(const package ethernet_packet) {
+package link_dissector(const package ethernet_packet) {
 
   if (ethernet_packet.type == IPv4) {
     const u_char *ip_pointer =
@@ -44,7 +46,7 @@ package link_dissect(const package ethernet_packet) {
 }
 
 // Dessection of network layer, receive packet and return segment
-package network_dissect(const package packet) {
+package network_dissector(const package packet) {
 
   const struct ip *ip = (struct ip *)packet.header_pointer;
   const int ip_header_size = ip->ip_hl * 4;
@@ -101,9 +103,9 @@ END:
 package transport_demux(const package segment) {
 
   if (segment.type == IPPROTO_TCP) {
-    return tcp_dissect(segment);
+    return tcp_dissector(segment);
   } else if (segment.type == IPPROTO_UDP) {
-    return udp_dissect(segment);
+    return udp_dissector(segment);
   }
 
   printf("Not TCP or UDP\n");
@@ -113,7 +115,7 @@ package transport_demux(const package segment) {
 
 // Dessection of TCP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
-package tcp_dissect(const package segment) {
+package tcp_dissector(const package segment) {
 
   const struct tcphdr *tcp = (struct tcphdr *)segment.header_pointer;
   /** printf("Src port: %d\n", ntohs(tcp->th_sport)); */
@@ -143,7 +145,7 @@ package tcp_dissect(const package segment) {
 
 // Dessection of UDP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
-package udp_dissect(const package segment) {
+package udp_dissector(const package segment) {
 
   /** const struct udphdr *udp = (struct udphdr *)segment.header_pointer; */
 
@@ -168,25 +170,23 @@ package udp_dissect(const package segment) {
 /*
  * print package payload data (avoid printing binary data)
  */
-void print_payload(const package payload_package) {
-  // check if payload is null
-  if (payload_package.is_valid == false) {
-    return;
-  }
+void print_payload(const u_char *payload, const uint payload_size) {
 
-  if (payload_package.package_size > 0) {
-    printf("payload size: %d bytes\n", payload_package.package_size);
-  } else {
-    printf("payload size: 0 bytes\n");
-    return;
-  }
+  /** if (payload_size > 0) { */
+  /**   printf("\t\tpayload size: %u bytes\n", payload_size); */
+  /** } else { */
+  /**   printf("\t\tpayload size: 0 bytes\n"); */
+  /**   return; */
+  /** } */
 
-  const int len = payload_package.package_size;
-  int len_rem = payload_package.package_size;
+  printf("\n");
+
+  const int len = payload_size;
+  int len_rem = payload_size;
   int line_width = 11; /* number of bytes per line */
   int line_len;
   int offset = 0; /* zero-based offset counter */
-  const u_char *ch = payload_package.header_pointer;
+  const u_char *ch = payload;
 
   if (len <= 0)
     return;
@@ -226,7 +226,7 @@ void print_hex_ascii_line(const u_char *const payload, int len, int offset) {
   const u_char *ch;
 
   /* offset */
-  printf("%05d   ", offset);
+  printf("\t\t%05d   ", offset);
 
   /* hex */
   ch = payload;

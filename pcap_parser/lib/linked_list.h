@@ -10,8 +10,14 @@ typedef struct Node {
   struct Node *next;
 } Node;
 
-// Insert a new node into the list
-void insert_node(Node **head, Node *new_node);
+// insert node by order desc (key) in the list
+void insert_node_desc(Node **head, Node *new_node);
+// insert node by order asc (key) in the list
+void insert_node_asc(Node **head, Node *node);
+// insert end of list
+void insert_last_node(Node **head, Node *node);
+// insert head of list
+void insert_first_node(Node **head, Node *node);
 // Search for a node with the given key
 Node *search_node(const Node *head, const uint64_t key);
 // Delete a node with the given key

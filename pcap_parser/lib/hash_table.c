@@ -1,14 +1,17 @@
 #include "hash_table.h"
+#include "dissection.h"
 #include "flow_api.h"
 #include "linked_list.h"
 #include "parsers.h"
 
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <netinet/in.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 // hash function
 uint hash(uint64_t x, size_t len) {
@@ -19,20 +22,29 @@ uint hash(uint64_t x, size_t len) {
 }
 // create a new hash table with all entries NULL
 HashTable create_hash_table(const size_t size) {
-  return (HashTable){size, malloc(size * sizeof(Node *))};
+  return (HashTable){size, calloc(size, sizeof(Node *))};
 }
 
 // create new packet node
-Node *create_packet_node(const struct parsed_packet pkt) {
+Node *create_payload_node(const struct parsed_packet pkt) {
 
   Node *const node = malloc(sizeof(Node));
   // allocate memory for value
-  node->value = malloc(sizeof(struct parsed_payload));
-  // copy value to the new node
-  memcpy(node->value, &pkt.payload, sizeof(struct parsed_payload));
+  struct parsed_payload *value = malloc(sizeof(struct parsed_payload));
 
+  // allocate memory for payload
+  u_char *const payload = malloc(pkt.payload.data_len);
+  memcpy(payload, pkt.payload.data, pkt.payload.data_len);
+
+  // copy payload to value
+  *value = (struct parsed_payload){.data = payload,
+                                   .data_len = pkt.payload.data_len};
+
+  // copy data to node
+  node->value = value;
   node->key = pkt.seq;
   node->next = NULL;
+
   return node;
 }
 
@@ -52,17 +64,25 @@ Node *create_flow_node(const uint64_t key, const flow_base_t flow) {
 void insert_flow(HashTable table, const uint64_t key, const flow_base_t flow) {
 
   uint index = hash(key, table.size);
-
-  insert_node(&table.lists[index], create_flow_node(key, flow));
+  insert_first_node(&table.lists[index], create_flow_node(key, flow));
 }
 
 // insert a packet data to a flow
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt) {
-  insert_node((get_flow_direction(flow, pkt)), create_packet_node(pkt));
+  if (is_tcp(pkt)) {
+    insert_node_asc((get_flow_direction(flow, pkt)), create_payload_node(pkt));
+  } else {
+    insert_first_node((get_flow_direction(flow, pkt)),
+                      create_payload_node(pkt));
+  }
 }
+
+// check protocol type
+bool is_tcp(const struct parsed_packet pkt) { return pkt.type == IPPROTO_TCP; }
 
 // search flow by a key in the hash table and return the flow
 flow_base_t *search_flow(const HashTable table, const uint64_t key) {
+
   uint index = hash(key, table.size);
   Node *head_flow = table.lists[index];
 
@@ -71,7 +91,6 @@ flow_base_t *search_flow(const HashTable table, const uint64_t key) {
   }
 
   Node *n = search_node(head_flow, key);
-
   return n == NULL ? NULL : (flow_base_t *)n->value;
 }
 
@@ -84,8 +103,8 @@ void free_hash_table(HashTable table) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
-        free_list(((flow_base_t *)tmp->value)->package_down);
-        free_list(((flow_base_t *)tmp->value)->package_up);
+        free_flow(((flow_base_t *)tmp->value)->package_down);
+        free_flow(((flow_base_t *)tmp->value)->package_up);
         flow_temp = flow_temp->next;
       }
     }
@@ -99,7 +118,6 @@ void free_hash_table(HashTable table) {
 void delete_flow(HashTable table, const uint64_t key) {
 
   uint index = hash(key, table.size);
-
   Node *n = table.lists[index];
 
   if (n == NULL) {
@@ -109,15 +127,15 @@ void delete_flow(HashTable table, const uint64_t key) {
   // find the flow node by key then free all package nodes in the flow, then
   // delete flow node
   if (n->key == key) {
-    free_list(((flow_base_t *)n->value)->package_down);
-    free_list(((flow_base_t *)n->value)->package_up);
+    free_flow(((flow_base_t *)n->value)->package_down);
+    free_flow(((flow_base_t *)n->value)->package_up);
     table.lists[index] = n->next;
     free_node(n);
   } else {
     while (n->next != NULL) {
       if (n->next->key == key) {
-        free_list(((flow_base_t *)n->next->value)->package_down);
-        free_list(((flow_base_t *)n->next->value)->package_up);
+        free_flow(((flow_base_t *)n->next->value)->package_down);
+        free_flow(((flow_base_t *)n->next->value)->package_up);
         Node *tmp = n->next;
         n->next = n->next->next;
         free_node(tmp);
@@ -178,7 +196,6 @@ void print_hashtable(const HashTable table) {
 
     printf("Id [%d]: \n", i);
     print_flows(head);
-
     printf("\n");
   }
 }
@@ -190,7 +207,6 @@ void print_flows(const Node *const head) {
   while (scaner != NULL) {
     printf("Key: %lu:\n", scaner->key);
     print_flow(*(flow_base_t *)scaner->value);
-
     scaner = scaner->next;
   }
 }
@@ -205,25 +221,38 @@ void print_flow(const flow_base_t flow) {
   printf("port: %d", flow.sp);
   printf(" <=> %d\n", flow.dp);
 
-  // print expected sequence number
-  printf("\t|exp seq DOWN: %u, ", flow.exp_seq_down);
-  printf("exp seq UP: %u\n", flow.exp_seq_up);
+  if (flow.ip_proto == IPPROTO_TCP) {
+    printf("\t|Protocol: TCP\n");
 
-  // print list of packets in the flow
-  Node *temp_down = flow.package_down;
-  while (temp_down != NULL) {
-
-    printf("\t\t[DOWN] seq: %ld, data size: %d\n", temp_down->key,
-           ((struct parsed_payload *)temp_down->value)->data_len);
-    temp_down = temp_down->next;
+    // print expected sequence number
+    printf("\t|exp seq DOWN: %u, ", flow.exp_seq_down);
+    printf("exp seq UP: %u\n", flow.exp_seq_up);
+  } else {
+    printf("\t|Protocol: UDP\n");
   }
 
-  Node *temp_up = flow.package_up;
-  while (temp_up != NULL) {
+  // print list of packets in the flow
+  print_payload_direction(flow.package_up, true);
+  print_payload_direction(flow.package_down, false);
+}
 
-    printf("\t\t[UP] seq: %ld, data size: %d\n", temp_up->key,
-           ((struct parsed_payload *)temp_up->value)->data_len);
-    temp_up = temp_up->next;
+// print payload direction
+void print_payload_direction(Node *head, bool is_up) {
+
+  Node *temp = head;
+  char *direction = is_up ? "UP" : "DOWN";
+
+  while (temp != NULL) {
+
+    printf("\t\t[%s] ", direction);
+    printf("Seq: %ld, data size: %d\n", temp->key,
+           ((struct parsed_payload *)temp->value)->data_len);
+    print_payload(((struct parsed_payload *)temp->value)->data,
+                  ((struct parsed_payload *)temp->value)->data_len);
+    printf("\t\t---------------------------------------------------------------"
+           "----"
+           "----\n");
+    temp = temp->next;
   }
 }
 
@@ -249,6 +278,7 @@ uint count_packets(const HashTable table) {
   }
   return count;
 }
+
 // get number of flows in hashtable
 uint count_flows(const HashTable table) {
 
@@ -260,6 +290,7 @@ uint count_flows(const HashTable table) {
     uint list_size = get_list_size(temp);
     count += list_size;
   }
+
   return count;
 }
 
@@ -268,7 +299,6 @@ uint get_flow_size(const flow_base_t *flow) {
 
   uint list_down_size = get_list_size(flow->package_down);
   uint list_up_size = get_list_size(flow->package_up);
-
   return list_down_size + list_up_size;
 }
 
@@ -276,13 +306,30 @@ uint get_flow_size(const flow_base_t *flow) {
 struct parsed_payload pop_head_payload(Node **flow_direction) {
 
   Node *node = pop_first_node(flow_direction);
+
   if (node == NULL) {
     printf("flow is empty, nothing to delete\n");
   }
 
   struct parsed_payload payload = *(struct parsed_payload *)node->value;
-
-  free_node(node);
-
+  free_payload(node);
   return payload;
+}
+
+// free a payload node and it's data in a flow
+void free_payload(Node *payload_node) {
+  // free payload data
+  free((u_char *)((struct parsed_payload *)payload_node->value)->data);
+  free_node(payload_node);
+}
+
+// free all payload nodes in a flow
+void free_flow(Node *flow_direction) {
+
+  Node *temp = flow_direction;
+  while (temp != NULL) {
+    Node *next = temp->next;
+    free_payload(temp);
+    temp = next;
+  }
 }

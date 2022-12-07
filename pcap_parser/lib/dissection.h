@@ -21,18 +21,18 @@
 
 typedef struct {
   const u_char *header_pointer;
-  const uint package_size;
+  uint package_size;
   uint16_t type;
   bool is_valid;
 } package;
 
-package frame_dissect(const u_char *packet, const struct pcap_pkthdr *header);
-package link_dissect(const package frame);
-package network_dissect(const package packet);
+package frame_dissector(const u_char *packet, const struct pcap_pkthdr *header);
+package link_dissector(const package frame);
+package network_dissector(const package packet);
 package transport_demux(const package segment);
-package tcp_dissect(const package segment);
-package udp_dissect(const package segment);
-void print_payload(const package payload_package);
+package tcp_dissector(const package segment);
+package udp_dissector(const package segment);
+void print_payload(const u_char *payload, const uint payload_size);
 void print_hex_ascii_line(const u_char *const payload, int len, int offset);
 
 #endif

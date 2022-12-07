@@ -19,7 +19,7 @@ typedef struct {
 uint hash(const uint64_t x, const size_t len);
 HashTable create_hash_table(const size_t size);
 Node *create_flow_node(const uint64_t key, const flow_base_t flow);
-Node *create_packet_node(const struct parsed_packet pkt);
+Node *create_payload_node(const struct parsed_packet pkt);
 flow_base_t create_flow(const struct parsed_packet pkt);
 void free_hash_table(HashTable table);
 // insert a new flow into the hash table
@@ -48,5 +48,13 @@ uint get_flow_size(const flow_base_t *flow);
 
 // pop head packet node from a flow
 struct parsed_payload pop_head_payload(Node **flow_diection);
-#endif
+// check protocol type
+bool is_tcp(const struct parsed_packet pkt);
+// free a payload node and it's data in a flow
+void free_payload(Node *payload_node);
+// free all payload nodes in a flow
+void free_flow(Node *flow_direction);
+// print payload direction
+void print_payload_direction(Node *head, bool is_up);
 
+#endif

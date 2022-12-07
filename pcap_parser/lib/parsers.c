@@ -10,9 +10,9 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
   pkt.src_ip = ip_header->ip_src;
   pkt.dst_ip = ip_header->ip_dst;
 
-  // print IP addresses
-  printf("Source IP: %s\n", inet_ntoa(pkt.src_ip));
-  printf("Destination IP: %s\n", inet_ntoa(pkt.dst_ip));
+  /** // print IP addresses */
+  /** printf("Source IP: %s\n", inet_ntoa(pkt.src_ip)); */
+  /** printf("Destination IP: %s\n", inet_ntoa(pkt.dst_ip)); */
 
   if (segment.type == IPPROTO_TCP) {
     const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
@@ -24,11 +24,11 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
     pkt.payload.data = payload.header_pointer;
     pkt.payload.data_len = payload.package_size;
 
-	printf("Protocol: TCP\n");
-    printf("Source port: %d\n", pkt.src_port);
-    printf("Destination port: %d\n", pkt.dst_port);
-    printf("Sequence number: %ld\n", pkt.seq);
-    printf("Payload size: %d\n", pkt.payload.data_len);
+	/** printf("Protocol: TCP\n"); */
+    /** printf("Source port: %d\n", pkt.src_port); */
+    /** printf("Destination port: %d\n", pkt.dst_port); */
+    /** printf("Sequence number: %ld\n", pkt.seq); */
+    /** printf("Payload size: %d\n", pkt.payload.data_len); */
 
   } else if (segment.type == IPPROTO_UDP) {
 
@@ -41,10 +41,10 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
     pkt.payload.data_len = payload.package_size;
     pkt.seq = NONE;
 
-	printf("Protocol: UDP\n");
-    printf("Source port: %d\n", pkt.src_port);
-    printf("Destination port: %d\n", pkt.dst_port);
-    printf("Payload size: %d\n", pkt.payload.data_len);
+	/** printf("Protocol: UDP\n"); */
+    /** printf("Source port: %d\n", pkt.src_port); */
+    /** printf("Destination port: %d\n", pkt.dst_port); */
+    /** printf("Payload size: %d\n", pkt.payload.data_len); */
   }
 
   return pkt;
