@@ -3,6 +3,7 @@
 
 #include "dissection.h"
 #include "flow_api.h"
+#include <netinet/tcp.h>
 
 struct parsed_payload {
   const u_char *data;
@@ -14,14 +15,14 @@ struct parsed_packet {
   // currently only used for IPv4
   struct in_addr src_ip;
   struct in_addr dst_ip;
-  in_port_t src_port;
-  in_port_t dst_port;
 
-  // type
-  uint16_t type;
+  // protocol
+  uint16_t protocol;
 
-  // for tcp
-  uint64_t seq;
+  union {
+    struct tcphdr tcp;
+    struct udphdr udp;
+  };
 
   struct parsed_payload payload;
 };

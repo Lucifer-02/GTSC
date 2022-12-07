@@ -48,8 +48,6 @@ uint get_flow_size(const flow_base_t *flow);
 
 // pop head packet node from a flow
 struct parsed_payload pop_head_payload(Node **flow_diection);
-// check protocol type
-bool is_tcp(const struct parsed_packet pkt);
 // free a payload node and it's data in a flow
 void free_payload(Node *payload_node);
 // free all payload nodes in a flow

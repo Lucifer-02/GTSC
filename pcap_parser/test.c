@@ -3,11 +3,14 @@
 #include "lib/hash_table.h"
 #include "lib/linked_list.h"
 #include "lib/parsers.h"
+#include <netinet/tcp.h>
 #include <stdio.h>
 
 const int HASH_TABLE_SIZE = 50;
 
 void get_packets(pcap_t *handler);
+// handle to skip tcp handshake packets
+void skip_handshake(HashTable table, struct parsed_packet pkt);
 
 int main() {
 
@@ -69,7 +72,8 @@ void get_packets(pcap_t *handler) {
 
     // insert to hash table
     struct parsed_packet pkt = pkt_parser(packet, segment, payload);
-    insert_packet(table, pkt);
+	/** insert_packet(table, pkt); */
+	skip_handshake(table, pkt);
 
   END:
     printf("-------------------------------------------------------------------"
@@ -91,4 +95,12 @@ void get_packets(pcap_t *handler) {
   print_flow(*search_flow(table, 2961644043));
 
   free_hash_table(table);
+}
+
+// handle to skip tcp handshake packets
+void skip_handshake(HashTable table, struct parsed_packet pkt) {
+  if (pkt.tcp.th_flags != TH_SYN && pkt.tcp.th_flags != TH_ACK &&
+      pkt.tcp.th_flags != TH_FIN) {
+    insert_packet(table, pkt);
+  }
 }

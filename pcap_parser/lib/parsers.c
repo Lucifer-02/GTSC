@@ -17,14 +17,16 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
   if (segment.type == IPPROTO_TCP) {
     const struct tcphdr *tcp_header = (struct tcphdr *)segment.header_pointer;
 
-    pkt.type = IPPROTO_TCP;
-    pkt.src_port = ntohs(tcp_header->source);
-    pkt.dst_port = ntohs(tcp_header->dest);
-    pkt.seq = ntohl(tcp_header->seq);
+    pkt.protocol = IPPROTO_TCP;
+    pkt.tcp.source = ntohs(tcp_header->source);
+    pkt.tcp.dest = ntohs(tcp_header->dest);
+    pkt.tcp.seq = ntohl(tcp_header->seq);
+    pkt.tcp.ack = ntohl(tcp_header->ack);
+    pkt.tcp.th_flags = tcp_header->th_flags;
     pkt.payload.data = payload.header_pointer;
     pkt.payload.data_len = payload.package_size;
 
-	/** printf("Protocol: TCP\n"); */
+    /** printf("Protocol: TCP\n"); */
     /** printf("Source port: %d\n", pkt.src_port); */
     /** printf("Destination port: %d\n", pkt.dst_port); */
     /** printf("Sequence number: %ld\n", pkt.seq); */
@@ -34,14 +36,13 @@ struct parsed_packet pkt_parser(const package packet, const package segment,
 
     const struct udphdr *udp_header = (struct udphdr *)segment.header_pointer;
 
-    pkt.type = IPPROTO_UDP;
-    pkt.src_port = ntohs(udp_header->source);
-    pkt.dst_port = ntohs(udp_header->dest);
+    pkt.protocol = IPPROTO_UDP;
+    pkt.udp.source = ntohs(udp_header->source);
+    pkt.udp.dest = ntohs(udp_header->dest);
     pkt.payload.data = payload.header_pointer;
     pkt.payload.data_len = payload.package_size;
-    pkt.seq = NONE;
 
-	/** printf("Protocol: UDP\n"); */
+    /** printf("Protocol: UDP\n"); */
     /** printf("Source port: %d\n", pkt.src_port); */
     /** printf("Destination port: %d\n", pkt.dst_port); */
     /** printf("Payload size: %d\n", pkt.payload.data_len); */

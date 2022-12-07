@@ -42,7 +42,7 @@ Node *create_payload_node(const struct parsed_packet pkt) {
 
   // copy data to node
   node->value = value;
-  node->key = pkt.seq;
+  node->key = pkt.tcp.seq;
   node->next = NULL;
 
   return node;
@@ -69,16 +69,13 @@ void insert_flow(HashTable table, const uint64_t key, const flow_base_t flow) {
 
 // insert a packet data to a flow
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt) {
-  if (is_tcp(pkt)) {
+  if (pkt.protocol == IPPROTO_TCP) {
     insert_node_asc((get_flow_direction(flow, pkt)), create_payload_node(pkt));
   } else {
     insert_first_node((get_flow_direction(flow, pkt)),
                       create_payload_node(pkt));
   }
 }
-
-// check protocol type
-bool is_tcp(const struct parsed_packet pkt) { return pkt.type == IPPROTO_TCP; }
 
 // search flow by a key in the hash table and return the flow
 flow_base_t *search_flow(const HashTable table, const uint64_t key) {
@@ -152,7 +149,9 @@ void insert_packet(HashTable table, const struct parsed_packet pkt) {
 
   printf("inserting packet \n");
   uint64_t flow_key =
-      pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.src_port + pkt.dst_port;
+      pkt.src_ip.s_addr + pkt.dst_ip.s_addr +
+      (pkt.protocol == IPPROTO_TCP ? pkt.tcp.source + pkt.tcp.dest
+                                   : pkt.udp.source + pkt.udp.dest);
 
   // flow in hash table
   flow_base_t *flow = search_flow(table, flow_key);
@@ -180,11 +179,13 @@ Node **get_flow_direction(const flow_base_t *flow,
 // create new flow
 flow_base_t create_flow(const struct parsed_packet pkt) {
 
-  return (flow_base_t){.sip = pkt.src_ip,
-                       .dip = pkt.dst_ip,
-                       .sp = pkt.src_port,
-                       .dp = pkt.dst_port,
-                       .ip_proto = pkt.type};
+  return (flow_base_t){
+      .sip = pkt.src_ip,
+      .dip = pkt.dst_ip,
+      .sp = pkt.tcp.source,
+      .dp = pkt.tcp.dest,
+      .ip_proto = pkt.protocol,
+  };
 }
 
 // print the hash table
@@ -247,11 +248,11 @@ void print_payload_direction(Node *head, bool is_up) {
     printf("\t\t[%s] ", direction);
     printf("Seq: %ld, data size: %d\n", temp->key,
            ((struct parsed_payload *)temp->value)->data_len);
-    print_payload(((struct parsed_payload *)temp->value)->data,
-                  ((struct parsed_payload *)temp->value)->data_len);
-    printf("\t\t---------------------------------------------------------------"
-           "----"
-           "----\n");
+	print_payload(((struct parsed_payload *)temp->value)->data,
+				  ((struct parsed_payload *)temp->value)->data_len);
+	printf("\t\t---------------------------------------------------------------"
+		   "----"
+		   "----\n");
     temp = temp->next;
   }
 }
