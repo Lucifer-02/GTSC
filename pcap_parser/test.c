@@ -1,8 +1,10 @@
 #include "lib/dissection.h"
 #include "lib/flow_api.h"
+#include "lib/handler.h"
 #include "lib/hash_table.h"
 #include "lib/linked_list.h"
 #include "lib/parsers.h"
+
 #include <netinet/tcp.h>
 #include <stdio.h>
 
@@ -72,7 +74,8 @@ void get_packets(pcap_t *handler) {
 
     // insert to hash table
     struct parsed_packet pkt = pkt_parser(packet, segment, payload);
-    insert_packet(table, pkt);
+    /** insert_packet(table, pkt); */
+    prepare_insert(table, pkt);
 
   END:
     printf("-------------------------------------------------------------------"
@@ -81,16 +84,14 @@ void get_packets(pcap_t *handler) {
 
   /** printf( */
   /**     "data length: %d\n", */
-  /**     pop_head_payload(&search_flow(table,
-   * 2961644043)->package_up).data_len); */
+  /**     pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len); */
   /** printf( */
   /**     "data length: %d\n", */
-  /**     pop_head_payload(&search_flow(table,
-   * 2961644043)->package_up).data_len); */
-  print_hashtable(table);
+  /**     pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len); */
+  /** print_hashtable(table); */
   /** printf("number of flows: %d\n", count_flows(table)); */
   /** printf("Number of packets: %d\n", count_packets(table)); */
-  /**  */
+
   print_flow(*search_flow(table, 2961644043));
 
   free_hash_table(table);
