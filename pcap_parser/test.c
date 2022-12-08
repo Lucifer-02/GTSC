@@ -12,7 +12,7 @@ void get_packets(pcap_t *handler);
 // handle to skip tcp handshake packets
 void skip_handshake(HashTable table, struct parsed_packet pkt);
 
-int main() {
+int main(void) {
 
   // error buffer
   char errbuff[PCAP_ERRBUF_SIZE];
@@ -72,8 +72,7 @@ void get_packets(pcap_t *handler) {
 
     // insert to hash table
     struct parsed_packet pkt = pkt_parser(packet, segment, payload);
-	/** insert_packet(table, pkt); */
-	skip_handshake(table, pkt);
+    insert_packet(table, pkt);
 
   END:
     printf("-------------------------------------------------------------------"
@@ -88,19 +87,11 @@ void get_packets(pcap_t *handler) {
   /**     "data length: %d\n", */
   /**     pop_head_payload(&search_flow(table,
    * 2961644043)->package_up).data_len); */
-  /** print_hashtable(table); */
+  print_hashtable(table);
   /** printf("number of flows: %d\n", count_flows(table)); */
   /** printf("Number of packets: %d\n", count_packets(table)); */
-
+  /**  */
   print_flow(*search_flow(table, 2961644043));
 
   free_hash_table(table);
-}
-
-// handle to skip tcp handshake packets
-void skip_handshake(HashTable table, struct parsed_packet pkt) {
-  if (pkt.tcp.th_flags != TH_SYN && pkt.tcp.th_flags != TH_ACK &&
-      pkt.tcp.th_flags != TH_FIN) {
-    insert_packet(table, pkt);
-  }
 }

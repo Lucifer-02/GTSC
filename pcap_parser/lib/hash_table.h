@@ -23,8 +23,8 @@ Node *create_payload_node(const struct parsed_packet pkt);
 flow_base_t create_flow(const struct parsed_packet pkt);
 void free_hash_table(HashTable table);
 // insert a new flow into the hash table
-void flow_insert(HashTable table, const uint64_t key, const flow_base_t flow);
-// Insert a packet into the hash table
+void insert_new_flow(HashTable table, const uint64_t key, const flow_base_t flow);
+// Insert a packet into a flow in the hash table
 void insert_packet(HashTable table, const struct parsed_packet pkt);
 // Insert a packet into a flow
 void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt);
@@ -40,12 +40,10 @@ void print_hashtable(const HashTable table);
 void print_flows(const Node *head);
 // print all packets in a flow
 void print_flow(const flow_base_t flow);
-
 Node **get_flow_direction(const flow_base_t *flow,
                           const struct parsed_packet pkt);
 // get number of nodes in a flow
 uint get_flow_size(const flow_base_t *flow);
-
 // pop head packet node from a flow
 struct parsed_payload pop_head_payload(Node **flow_diection);
 // free a payload node and it's data in a flow

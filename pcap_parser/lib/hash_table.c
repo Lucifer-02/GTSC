@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -42,7 +43,7 @@ Node *create_payload_node(const struct parsed_packet pkt) {
 
   // copy data to node
   node->value = value;
-  node->key = pkt.tcp.seq;
+  node->key = pkt.protocol == IPPROTO_TCP ? pkt.tcp.seq : 0;
   node->next = NULL;
 
   return node;
@@ -60,9 +61,8 @@ Node *create_flow_node(const uint64_t key, const flow_base_t flow) {
   node->next = NULL;
   return node;
 }
-// insert a new Node into the hash table
-void insert_flow(HashTable table, const uint64_t key, const flow_base_t flow) {
-
+// insert a new flow into the hash table
+void insert_new_flow(HashTable table, const uint64_t key, const flow_base_t flow) {
   uint index = hash(key, table.size);
   insert_first_node(&table.lists[index], create_flow_node(key, flow));
 }
@@ -148,24 +148,45 @@ void delete_flow(HashTable table, const uint64_t key) {
 void insert_packet(HashTable table, const struct parsed_packet pkt) {
 
   printf("inserting packet \n");
-  uint64_t flow_key =
-      pkt.src_ip.s_addr + pkt.dst_ip.s_addr +
-      (pkt.protocol == IPPROTO_TCP ? pkt.tcp.source + pkt.tcp.dest
-                                   : pkt.udp.source + pkt.udp.dest);
 
-  // flow in hash table
-  flow_base_t *flow = search_flow(table, flow_key);
+  uint64_t flow_key;
 
-  if (flow == NULL) {
-    printf("flow not found, creating new one\n");
+  if (pkt.protocol == IPPROTO_TCP) {
+    flow_key =
+        pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.tcp.source + pkt.tcp.dest;
+    flow_base_t *flow = search_flow(table, flow_key);
 
-    flow_base_t new_flow = create_flow(pkt);
-    insert_to_flow(&new_flow, pkt);
-    insert_flow(table, flow_key, new_flow);
+    if (flow == NULL) {
+      printf("flow not found, creating new one if it is SYN\n");
 
+      // create new flow if it is SYN
+      if (pkt.tcp.th_flags == TH_SYN) {
+        flow_base_t new_flow = create_flow(pkt);
+        insert_new_flow(table, flow_key, new_flow);
+        printf("new flow created\n");
+      } else {
+        printf("packet is not SYN, ignoring\n");
+      }
+
+    } else if (pkt.tcp.th_flags != TH_ACK) {
+      printf("flow found, inserting to it\n");
+      insert_to_flow(flow, pkt);
+    }
   } else {
-    printf("flow found, inserting to it\n");
-    insert_to_flow(flow, pkt);
+    flow_key =
+        pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.udp.source + pkt.udp.dest;
+    flow_base_t *flow = search_flow(table, flow_key);
+    if (flow == NULL) {
+      printf("flow not found, creating new one if it is SYN\n");
+
+      flow_base_t new_flow = create_flow(pkt);
+      insert_new_flow(table, flow_key, new_flow);
+      printf("new flow created\n");
+
+    } else {
+      printf("flow found, inserting to it\n");
+      insert_to_flow(flow, pkt);
+    }
   }
 }
 
@@ -179,13 +200,25 @@ Node **get_flow_direction(const flow_base_t *flow,
 // create new flow
 flow_base_t create_flow(const struct parsed_packet pkt) {
 
-  return (flow_base_t){
-      .sip = pkt.src_ip,
-      .dip = pkt.dst_ip,
-      .sp = pkt.tcp.source,
-      .dp = pkt.tcp.dest,
-      .ip_proto = pkt.protocol,
-  };
+  return pkt.protocol == IPPROTO_TCP
+			 ? (flow_base_t){
+				   .sip = pkt.src_ip,
+				   .dip = pkt.dst_ip,
+				   .sp= pkt.tcp.source,
+				   .dp= pkt.tcp.dest,
+				   .ip_proto = pkt.protocol,
+				   .package_up = NULL,
+				   .package_down = NULL,
+			   }
+			 : (flow_base_t){
+				   .sip = pkt.src_ip,
+				   .dip = pkt.dst_ip,
+				   .sp= pkt.udp.source,
+				   .dp= pkt.udp.dest,
+				   .ip_proto = pkt.protocol,
+				   .package_up = NULL,
+				   .package_down = NULL,
+			   };
 }
 
 // print the hash table
@@ -194,7 +227,6 @@ void print_hashtable(const HashTable table) {
   printf("**********HASH TABLE**********\n");
   for (uint i = 0; i < table.size; i++) {
     Node *head = table.lists[i];
-
     printf("Id [%d]: \n", i);
     print_flows(head);
     printf("\n");
@@ -241,18 +273,18 @@ void print_flow(const flow_base_t flow) {
 void print_payload_direction(Node *head, bool is_up) {
 
   Node *temp = head;
-  char *direction = is_up ? "UP" : "DOWN";
+  const char *direction = is_up ? "UP" : "DOWN";
 
   while (temp != NULL) {
 
     printf("\t\t[%s] ", direction);
     printf("Seq: %ld, data size: %d\n", temp->key,
            ((struct parsed_payload *)temp->value)->data_len);
-	print_payload(((struct parsed_payload *)temp->value)->data,
-				  ((struct parsed_payload *)temp->value)->data_len);
-	printf("\t\t---------------------------------------------------------------"
-		   "----"
-		   "----\n");
+    print_payload(((struct parsed_payload *)temp->value)->data,
+                  ((struct parsed_payload *)temp->value)->data_len);
+    printf("\t\t---------------------------------------------------------------"
+           "----"
+           "----\n");
     temp = temp->next;
   }
 }
@@ -297,7 +329,6 @@ uint count_flows(const HashTable table) {
 
 // get number of nodes in a flow
 uint get_flow_size(const flow_base_t *flow) {
-
   uint list_down_size = get_list_size(flow->package_down);
   uint list_up_size = get_list_size(flow->package_up);
   return list_down_size + list_up_size;
