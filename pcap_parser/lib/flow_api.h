@@ -12,11 +12,7 @@
 
 #pragma once
 
-#include <linux/if_ether.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
-#include <stddef.h>
-#include <stdint.h>
 
 #include "linked_list.h"
 
@@ -60,8 +56,8 @@ typedef struct __flow_base_s {
   u_int exp_seq_up;   // direction up
   u_int exp_seq_down; // direction down
 
-  Node *package_up;
-  Node *package_down;
+  Node *flow_up;
+  Node *flow_down;
 
 } flow_base_t;
 

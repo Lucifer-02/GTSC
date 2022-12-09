@@ -2,15 +2,13 @@
 #define PARSER_H
 
 #include "dissection.h"
-#include "flow_api.h"
-#include <netinet/tcp.h>
 
-struct parsed_payload {
-  const u_char *data;
+typedef struct {
+  u_char const *data;
   uint data_len;
-};
+} parsed_payload;
 
-struct parsed_packet {
+typedef struct {
 
   // currently only used for IPv4
   struct in_addr src_ip;
@@ -24,10 +22,13 @@ struct parsed_packet {
     struct udphdr udp;
   };
 
-  struct parsed_payload payload;
-};
+  parsed_payload payload;
 
-struct parsed_packet pkt_parser(const package packet, const package segment,
-                                const package payload);
+} parsed_packet;
+
+parsed_packet pkt_parser(package packet, package segment, package payload);
+
+void tcp_parser(parsed_packet *pkt, package segment, package payload);
+void udp_parser(parsed_packet *pkt, package segment, package payload);
 
 #endif

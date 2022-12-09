@@ -4,11 +4,7 @@
 #include <ctype.h>
 #include <pcap.h>
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <sys/types.h>
 
-#include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -20,19 +16,20 @@
 #define NONE 0x0000
 
 typedef struct {
-  const u_char *header_pointer;
+  u_char const *header_pointer;
   uint package_size;
   uint16_t type;
   bool is_valid;
 } package;
 
-package frame_dissector(const u_char *packet, const struct pcap_pkthdr *header);
-package link_dissector(const package frame);
-package network_dissector(const package packet);
-package transport_demux(const package segment);
-package tcp_dissector(const package segment);
-package udp_dissector(const package segment);
-void print_payload(const u_char *payload, const uint payload_size);
-void print_hex_ascii_line(const u_char *const payload, int len, int offset);
+package frame_dissector(u_char const *packet, struct pcap_pkthdr const *header);
+package link_dissector(package frame);
+package network_dissector(package packet);
+
+// select the correct transport layer protocol
+package transport_demux(package segment);
+package tcp_dissector(package segment);
+package udp_dissector(package segment);
+
 
 #endif

@@ -1,9 +1,8 @@
 #include "dissection.h"
-#include <sys/types.h>
 
 // Dessection of ethernet frame, return a frame
-package frame_dissector(const u_char *packet,
-                        const struct pcap_pkthdr *header) {
+package frame_dissector(u_char const *packet,
+                        struct pcap_pkthdr const *header) {
 
   /** // Show the size in bytes of the package */
   /** printf("Packet size: %d bytes\n", header->len); */
@@ -14,7 +13,7 @@ package frame_dissector(const u_char *packet,
            header->len);
   }
 
-  const struct ether_header *ethernet = (struct ether_header *)(packet);
+  struct ether_header const *ethernet = (struct ether_header *)(packet);
 
   return (package){.header_pointer = (u_char *)ethernet,
                    .package_size = header->len,
@@ -24,13 +23,12 @@ package frame_dissector(const u_char *packet,
 
 // Dessection of link layer, currently only IPv4, recieves ethernet frame and
 // return packet
-package link_dissector(const package ethernet_packet) {
+package link_dissector(package ethernet_packet) {
 
   if (ethernet_packet.type == IPv4) {
-    const u_char *ip_pointer =
+    u_char const *ip_pointer =
         ethernet_packet.header_pointer + ETHERNET_HEADER_SIZE;
-    const int ip_packet_size =
-        ethernet_packet.package_size - ETHERNET_HEADER_SIZE;
+    int ip_packet_size = ethernet_packet.package_size - ETHERNET_HEADER_SIZE;
 
     return (package){.header_pointer = ip_pointer,
                      .package_size = ip_packet_size,
@@ -46,10 +44,10 @@ package link_dissector(const package ethernet_packet) {
 }
 
 // Dessection of network layer, receive packet and return segment
-package network_dissector(const package packet) {
+package network_dissector(package packet) {
 
-  const struct ip *ip = (struct ip *)packet.header_pointer;
-  const int ip_header_size = ip->ip_hl * 4;
+  struct ip const *ip = (struct ip *)packet.header_pointer;
+  int ip_header_size = ip->ip_hl * 4;
 
   // check size of ip header
   if (ip_header_size < 20) {
@@ -67,10 +65,10 @@ package network_dissector(const package packet) {
     /** printf("Protocol TCP\n"); */
 
     // get tcp header
-    const struct tcphdr *tcp =
+    struct tcphdr const *tcp =
         (struct tcphdr *)(packet.header_pointer + ip_header_size);
 
-    const int segment_size = packet.package_size - ip_header_size;
+    int segment_size = packet.package_size - ip_header_size;
     return (package){.header_pointer = (u_char *)tcp,
                      .package_size = segment_size,
                      .type = IPPROTO_TCP,
@@ -81,10 +79,10 @@ package network_dissector(const package packet) {
     /** printf("Protocol UDP\n"); */
 
     // get udp header
-    const struct udphdr *udp =
+    struct udphdr const *udp =
         (struct udphdr *)(packet.header_pointer + ip_header_size);
 
-    const int segment_size = packet.package_size - ip_header_size;
+    int segment_size = packet.package_size - ip_header_size;
 
     return (package){
         .header_pointer = (u_char *)udp,
@@ -98,9 +96,8 @@ END:
   return (package){.is_valid = false};
 }
 
-// select the correct transport layer protocol, receive segment and return a
-// payload
-package transport_demux(const package segment) {
+// select the correct transport layer protocol
+package transport_demux(package segment) {
 
   if (segment.type == IPPROTO_TCP) {
     return tcp_dissector(segment);
@@ -115,9 +112,9 @@ package transport_demux(const package segment) {
 
 // Dessection of TCP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
-package tcp_dissector(const package segment) {
+package tcp_dissector(package segment) {
 
-  const struct tcphdr *tcp = (struct tcphdr *)segment.header_pointer;
+  struct tcphdr const *tcp = (struct tcphdr *)segment.header_pointer;
   /** printf("Src port: %d\n", ntohs(tcp->th_sport)); */
   /** printf("Dst port: %d\n", ntohs(tcp->th_dport)); */
 
@@ -125,7 +122,7 @@ package tcp_dissector(const package segment) {
   /** printf("seq: %u, ack: %u, offset: %u \n", ntohl(tcp->th_seq), */
   /**        ntohl(tcp->th_ack), tcp->th_off); */
 
-  const int tcp_header_size = tcp->th_off * 4;
+  int tcp_header_size = tcp->th_off * 4;
   // check size of tcp header
   if (tcp_header_size < 20) {
     printf("   * Invalid TCP header length: %u bytes\n", tcp_header_size);
@@ -133,10 +130,10 @@ package tcp_dissector(const package segment) {
     return (package){.is_valid = false};
   }
 
-  const u_char *payload = (u_char *)(segment.header_pointer + tcp_header_size);
+  u_char const *payload = (u_char *)(segment.header_pointer + tcp_header_size);
 
   // get payload size
-  const int payload_size = segment.package_size - tcp_header_size;
+  int payload_size = segment.package_size - tcp_header_size;
   return (package){.header_pointer = payload,
                    .package_size = payload_size,
                    .type = NONE,
@@ -145,7 +142,7 @@ package tcp_dissector(const package segment) {
 
 // Dessection of UDP segment, receive segment and return a payload
 // NOTE: this function is only for transport_demux function
-package udp_dissector(const package segment) {
+package udp_dissector(package segment) {
 
   /** const struct udphdr *udp = (struct udphdr *)segment.header_pointer; */
 
@@ -153,12 +150,12 @@ package udp_dissector(const package segment) {
   /** printf("Src port: %d\n", ntohs(udp->uh_sport)); */
   /** printf("Dst port: %d\n", ntohs(udp->uh_dport)); */
 
-  const int udp_header_size = 8;
+  int udp_header_size = 8;
 
   // get payload
-  const u_char *payload = (u_char *)(segment.header_pointer + udp_header_size);
-  const int payload_size = segment.package_size -
-                           udp_header_size; // get payload size using udp header
+  u_char const *payload = (u_char *)(segment.header_pointer + udp_header_size);
+  int payload_size = segment.package_size -
+                     udp_header_size; // get payload size using udp header
 
   // print length of payload + checksum
   return (package){.header_pointer = payload,
@@ -167,100 +164,3 @@ package udp_dissector(const package segment) {
                    .is_valid = true};
 }
 
-/*
- * print package payload data (avoid printing binary data)
- */
-void print_payload(const u_char *payload, const uint payload_size) {
-
-  /** if (payload_size > 0) { */
-  /**   printf("\t\tpayload size: %u bytes\n", payload_size); */
-  /** } else { */
-  /**   printf("\t\tpayload size: 0 bytes\n"); */
-  /**   return; */
-  /** } */
-
-  printf("\n");
-
-  const int len = payload_size;
-  int len_rem = payload_size;
-  int line_width = 11; /* number of bytes per line */
-  int line_len;
-  int offset = 0; /* zero-based offset counter */
-  const u_char *ch = payload;
-
-  if (len <= 0)
-    return;
-
-  /* data fits on one line */
-  if (len <= line_width) {
-    print_hex_ascii_line(ch, len, offset);
-    return;
-  }
-
-  /* data spans multiple lines */
-  for (;;) {
-    /* compute current line length */
-    line_len = line_width % len_rem;
-    /* print line */
-    print_hex_ascii_line(ch, line_len, offset);
-    /* compute total remaining */
-    len_rem = len_rem - line_len;
-    /* shift pointer to remaining bytes to print */
-    ch = ch + line_len;
-    /* add offset */
-    offset = offset + line_width;
-    /* check if we have line width chars or less */
-    if (len_rem <= line_width) {
-      /* print last line and get out */
-      print_hex_ascii_line(ch, len_rem, offset);
-      break;
-    }
-  }
-
-  return;
-}
-
-void print_hex_ascii_line(const u_char *const payload, int len, int offset) {
-
-  int gap;
-  const u_char *ch;
-
-  /* offset */
-  printf("\t\t%05d   ", offset);
-
-  /* hex */
-  ch = payload;
-  for (int i = 0; i < len; i++) {
-    printf("%02x ", *ch);
-    ch++;
-    /* print extra space after 8th byte for visual aid */
-    if (i == 7)
-      printf(" ");
-  }
-  /* print space to handle line less than 8 bytes */
-  if (len < 8)
-    printf(" ");
-
-  /* fill hex gap with spaces if not full line */
-  if (len < 16) {
-    gap = 16 - len;
-    for (int i = 0; i < gap; i++) {
-      printf("   ");
-    }
-  }
-  printf("   ");
-
-  /* ascii (if printable) */
-  ch = payload;
-  for (int i = 0; i < len; i++) {
-    if (isprint(*ch))
-      printf("%c", *ch);
-    else
-      printf(".");
-    ch++;
-  }
-
-  printf("\n");
-
-  return;
-}

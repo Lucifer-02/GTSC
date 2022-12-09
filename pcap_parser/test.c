@@ -1,18 +1,8 @@
-#include "lib/dissection.h"
-#include "lib/flow_api.h"
 #include "lib/handler.h"
-#include "lib/hash_table.h"
-#include "lib/linked_list.h"
-#include "lib/parsers.h"
 
-#include <netinet/tcp.h>
-#include <stdio.h>
-
-const int HASH_TABLE_SIZE = 50;
+int const HASH_TABLE_SIZE = 50;
 
 void get_packets(pcap_t *handler);
-// handle to skip tcp handshake packets
-void skip_handshake(HashTable table, struct parsed_packet pkt);
 
 int main(void) {
 
@@ -36,7 +26,7 @@ void get_packets(pcap_t *handler) {
   struct pcap_pkthdr *header;
 
   // The actual packet
-  const u_char *full_packet;
+  u_char const *full_packet;
 
   int packetCount = 0;
 
@@ -49,48 +39,45 @@ void get_packets(pcap_t *handler) {
     printf("Packet # %i\n", ++packetCount);
 
     //--------------------------------------------------------------------------
-    const package frame = frame_dissector(full_packet, header);
+    package frame = frame_dissector(full_packet, header);
     if (frame.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
-    const package packet = link_dissector(frame);
+    package packet = link_dissector(frame);
     if (packet.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
-    const package segment = network_dissector(packet);
+    package segment = network_dissector(packet);
     if (segment.is_valid == false) {
       goto END;
     }
 
     //--------------------------------------------------------------------------
-    const package payload = transport_demux(segment);
+    package payload = transport_demux(segment);
     if (payload.is_valid == false) {
       goto END;
     }
 
     // insert to hash table
-    struct parsed_packet pkt = pkt_parser(packet, segment, payload);
-    /** insert_packet(table, pkt); */
-    prepare_insert(table, pkt);
+    parsed_packet pkt = pkt_parser(packet, segment, payload);
+    insert_packet(table, pkt);
 
   END:
     printf("-------------------------------------------------------------------"
            "----\n");
   }
 
-  /** printf( */
-  /**     "data length: %d\n", */
-  /**     pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len); */
-  /** printf( */
-  /**     "data length: %d\n", */
-  /**     pop_head_payload(&search_flow(table, 2961644043)->package_up).data_len); */
-  /** print_hashtable(table); */
-  /** printf("number of flows: %d\n", count_flows(table)); */
-  /** printf("Number of packets: %d\n", count_packets(table)); */
+  printf("data length: %d\n",
+         pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len);
+  printf("data length: %d\n",
+         pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len);
+  print_hashtable(table);
+  printf("number of flows: %d\n", count_flows(table));
+  printf("Number of packets: %d\n", count_packets(table));
 
   print_flow(*search_flow(table, 2961644043));
 

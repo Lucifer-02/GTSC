@@ -1,11 +1,9 @@
 #include "linked_list.h"
-#include "flow_api.h"
 #include <pcap.h>
-#include <string.h>
 
 // Search for a node with the given key
-Node *search_node(const Node *head, const uint64_t key) {
-  const Node *current = head;
+Node *search_node(Node const *head, uint64_t key) {
+  Node const *current = head;
   while (current != NULL) {
     if (current->key == key) {
       return (Node *)current;
@@ -58,9 +56,9 @@ void free_node(Node *node) {
 }
 
 // Get number of nodes in the list
-uint get_list_size(const Node *head) {
+uint get_list_size(Node const *head) {
   uint size = 0;
-  const Node *n = head;
+  Node const *n = head;
   while (n != NULL) {
     n = n->next;
     size++;
@@ -69,7 +67,7 @@ uint get_list_size(const Node *head) {
 }
 
 // insert node by order desc (key) in the list
-void insert_node_desc(Node **head, Node *node) {
+void insert_node_desc(Node **head, Node *const node) {
   Node *n = *head;
   if (n == NULL) {
     *head = node;
@@ -92,7 +90,7 @@ void insert_node_desc(Node **head, Node *node) {
 }
 
 // insert node by order asc (key) in the list
-void insert_node_asc(Node **head, Node *node) {
+void insert_node_asc(Node **head, Node *const node) {
   Node *n = *head;
   if (n == NULL) {
     *head = node;
@@ -115,7 +113,7 @@ void insert_node_asc(Node **head, Node *node) {
 }
 
 // insert end of list
-void insert_last_node(Node **head, Node *node) {
+void insert_last_node(Node **head, Node *const node) {
 
   Node *n = *head;
   if (n == NULL) {
@@ -129,7 +127,7 @@ void insert_last_node(Node **head, Node *node) {
 }
 
 // insert head of list
-void insert_first_node(Node **head, Node *node) {
+void insert_first_node(Node **head, Node *const node) {
   Node *n = *head;
   if (n == NULL) {
     *head = node;
