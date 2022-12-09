@@ -2,31 +2,33 @@
 #define PARSER_H
 
 #include "dissection.h"
-#include "flow_api.h"
 
-struct parsed_payload {
-  const u_char *data;
+typedef struct {
+  u_char const *data;
   uint data_len;
-};
+} parsed_payload;
 
-struct parsed_packet {
+typedef struct {
 
   // currently only used for IPv4
   struct in_addr src_ip;
   struct in_addr dst_ip;
-  in_port_t src_port;
-  in_port_t dst_port;
 
-  // type
-  uint16_t type;
+  // protocol
+  uint16_t protocol;
 
-  // for tcp
-  uint64_t seq;
+  union {
+    struct tcphdr tcp;
+    struct udphdr udp;
+  };
 
-  struct parsed_payload payload;
-};
+  parsed_payload payload;
 
-struct parsed_packet pkt_parser(const package packet, const package segment,
-                                const package payload);
+} parsed_packet;
+
+parsed_packet pkt_parser(package packet, package segment, package payload);
+
+void tcp_parser(parsed_packet *pkt, package segment, package payload);
+void udp_parser(parsed_packet *pkt, package segment, package payload);
 
 #endif

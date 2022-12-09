@@ -1,14 +1,6 @@
 #include "hash_table.h"
-#include "flow_api.h"
-#include "linked_list.h"
-#include "parsers.h"
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
+#include <assert.h>
 
 // hash function
 uint hash(uint64_t x, size_t len) {
@@ -17,52 +9,39 @@ uint hash(uint64_t x, size_t len) {
   x = (x >> 16) ^ x;
   return x % len;
 }
-// create a new hash table with all entries NULL
-HashTable create_hash_table(const size_t size) {
-  return (HashTable){size, malloc(size * sizeof(Node *))};
+
+// create a new hash table with all entries 0
+HashTable create_hash_table(size_t size) {
+  HashTable table = {size, calloc(size, sizeof(Node *))};
+  assert(table.lists != NULL);
+  return table;
 }
 
-// create new packet node
-Node *create_packet_node(const struct parsed_packet pkt) {
-
-  Node *const node = malloc(sizeof(Node));
-  // allocate memory for value
-  node->value = malloc(sizeof(struct parsed_payload));
-  // copy value to the new node
-  memcpy(node->value, &pkt.payload, sizeof(struct parsed_payload));
-
-  node->key = pkt.seq;
-  node->next = NULL;
-  return node;
-}
-
-Node *create_flow_node(const uint64_t key, const flow_base_t flow) {
-
-  Node *const node = malloc(sizeof(Node));
-  // allocate memory for value
-  node->value = malloc(sizeof(flow_base_t));
-  // copy value to the new node
-  memcpy(node->value, &flow, sizeof(flow_base_t));
-
-  node->key = key;
-  node->next = NULL;
-  return node;
-}
-// insert a new Node into the hash table
-void insert_flow(HashTable table, const uint64_t key, const flow_base_t flow) {
-
-  uint index = hash(key, table.size);
-
-  insert_node(&table.lists[index], create_flow_node(key, flow));
+// insert a new flow into the hash table
+void insert_new_flow(HashTable table, Node *const flow_node) {
+  uint index = hash(flow_node->key, table.size);
+  insert_first_node(&table.lists[index], flow_node);
 }
 
 // insert a packet data to a flow
-void insert_to_flow(flow_base_t *flow, const struct parsed_packet pkt) {
-  insert_node((get_flow_direction(flow, pkt)), create_packet_node(pkt));
+void insert_to_flow(Node *const pkt_node, enum InsertAlgorihm insert_type,
+                    Node **flow_direction) {
+  if (insert_type == DESC) {
+    insert_node_desc(flow_direction, pkt_node);
+  }
+
+  if (insert_type == ASC) {
+    insert_node_asc(flow_direction, pkt_node);
+  }
+
+  if (insert_type == FIRST) {
+    insert_first_node(flow_direction, pkt_node);
+  }
 }
 
-// search flow by a key in the hash table and return the flow
-flow_base_t *search_flow(const HashTable table, const uint64_t key) {
+// search flow by key in the hash table
+flow_base_t *search_flow(HashTable const table, uint64_t key) {
+
   uint index = hash(key, table.size);
   Node *head_flow = table.lists[index];
 
@@ -71,7 +50,6 @@ flow_base_t *search_flow(const HashTable table, const uint64_t key) {
   }
 
   Node *n = search_node(head_flow, key);
-
   return n == NULL ? NULL : (flow_base_t *)n->value;
 }
 
@@ -84,8 +62,8 @@ void free_hash_table(HashTable table) {
       // free each package nodes in each flow
       while (flow_temp != NULL) {
         Node *tmp = flow_temp;
-        free_list(((flow_base_t *)tmp->value)->package_down);
-        free_list(((flow_base_t *)tmp->value)->package_up);
+        free_flow_direction(((flow_base_t *)tmp->value)->flow_down);
+        free_flow_direction(((flow_base_t *)tmp->value)->flow_up);
         flow_temp = flow_temp->next;
       }
     }
@@ -96,10 +74,9 @@ void free_hash_table(HashTable table) {
 }
 
 // remove flow from hash table
-void delete_flow(HashTable table, const uint64_t key) {
+void delete_flow(HashTable table, uint64_t key) {
 
   uint index = hash(key, table.size);
-
   Node *n = table.lists[index];
 
   if (n == NULL) {
@@ -109,15 +86,15 @@ void delete_flow(HashTable table, const uint64_t key) {
   // find the flow node by key then free all package nodes in the flow, then
   // delete flow node
   if (n->key == key) {
-    free_list(((flow_base_t *)n->value)->package_down);
-    free_list(((flow_base_t *)n->value)->package_up);
+    free_flow_direction(((flow_base_t *)n->value)->flow_down);
+    free_flow_direction(((flow_base_t *)n->value)->flow_up);
     table.lists[index] = n->next;
     free_node(n);
   } else {
     while (n->next != NULL) {
       if (n->next->key == key) {
-        free_list(((flow_base_t *)n->next->value)->package_down);
-        free_list(((flow_base_t *)n->next->value)->package_up);
+        free_flow_direction(((flow_base_t *)n->next->value)->flow_down);
+        free_flow_direction(((flow_base_t *)n->next->value)->flow_up);
         Node *tmp = n->next;
         n->next = n->next->next;
         free_node(tmp);
@@ -129,128 +106,31 @@ void delete_flow(HashTable table, const uint64_t key) {
   printf("flow with key %ld not found to delete\n", key);
 }
 
-// Insert packet into the hash table
-void insert_packet(HashTable table, const struct parsed_packet pkt) {
-
-  printf("inserting packet \n");
-  uint64_t flow_key =
-      pkt.src_ip.s_addr + pkt.dst_ip.s_addr + pkt.src_port + pkt.dst_port;
-
-  // flow in hash table
-  flow_base_t *flow = search_flow(table, flow_key);
-
-  if (flow == NULL) {
-    printf("flow not found, creating new one\n");
-
-    flow_base_t new_flow = create_flow(pkt);
-    insert_to_flow(&new_flow, pkt);
-    insert_flow(table, flow_key, new_flow);
-
-  } else {
-    printf("flow found, inserting to it\n");
-    insert_to_flow(flow, pkt);
-  }
-}
-
-Node **get_flow_direction(const flow_base_t *flow,
-                          const struct parsed_packet pkt) {
-  // This cast may be unsafe because discards const
-  return pkt.src_ip.s_addr == flow->sip.s_addr ? (Node **)(&flow->package_up)
-                                               : (Node **)(&flow->package_down);
-}
-
-// create new flow
-flow_base_t create_flow(const struct parsed_packet pkt) {
-
-  return (flow_base_t){.sip = pkt.src_ip,
-                       .dip = pkt.dst_ip,
-                       .sp = pkt.src_port,
-                       .dp = pkt.dst_port,
-                       .ip_proto = pkt.type};
-}
-
-// print the hash table
-void print_hashtable(const HashTable table) {
-
-  printf("**********HASH TABLE**********\n");
-  for (uint i = 0; i < table.size; i++) {
-    Node *head = table.lists[i];
-
-    printf("Id [%d]: \n", i);
-    print_flows(head);
-
-    printf("\n");
-  }
-}
-
-void print_flows(const Node *const head) {
-
-  const Node *scaner = head;
-
-  while (scaner != NULL) {
-    printf("Key: %lu:\n", scaner->key);
-    print_flow(*(flow_base_t *)scaner->value);
-
-    scaner = scaner->next;
-  }
-}
-
-// print flow node
-void print_flow(const flow_base_t flow) {
-  // print ip addresses
-  printf("\t|ip: %s", inet_ntoa(flow.sip));
-  printf(" <=> %s, ", inet_ntoa(flow.dip));
-
-  // print port
-  printf("port: %d", flow.sp);
-  printf(" <=> %d\n", flow.dp);
-
-  // print expected sequence number
-  printf("\t|exp seq DOWN: %u, ", flow.exp_seq_down);
-  printf("exp seq UP: %u\n", flow.exp_seq_up);
-
-  // print list of packets in the flow
-  Node *temp_down = flow.package_down;
-  while (temp_down != NULL) {
-
-    printf("\t\t[DOWN] seq: %ld, data size: %d\n", temp_down->key,
-           ((struct parsed_payload *)temp_down->value)->data_len);
-    temp_down = temp_down->next;
-  }
-
-  Node *temp_up = flow.package_up;
-  while (temp_up != NULL) {
-
-    printf("\t\t[UP] seq: %ld, data size: %d\n", temp_up->key,
-           ((struct parsed_payload *)temp_up->value)->data_len);
-    temp_up = temp_up->next;
-  }
-}
-
 // Get number of packets in hash table
-uint count_packets(const HashTable table) {
+uint count_packets(HashTable const table) {
 
   int count = 0;
-  const Node *flow_temp;
+  Node const *flow_temp;
 
   for (size_t i = 0; i < table.size; i++) {
     flow_temp = table.lists[i];
     while (flow_temp != NULL) {
 
-      Node *packet_down_temp = ((flow_base_t *)flow_temp->value)->package_down;
-      Node *packet_up_temp = ((flow_base_t *)flow_temp->value)->package_up;
+      Node *flow_down_temp = ((flow_base_t *)flow_temp->value)->flow_down;
+      Node *flow_up_temp = ((flow_base_t *)flow_temp->value)->flow_up;
 
-      uint list_down_size = get_list_size(packet_down_temp);
-      uint list_up_size = get_list_size(packet_up_temp);
+      uint flow_down_size = get_list_size(flow_down_temp);
+      uint flow_up_size = get_list_size(flow_up_temp);
 
-      count += list_down_size + list_up_size;
+      count += flow_down_size + flow_up_size;
       flow_temp = flow_temp->next;
     }
   }
   return count;
 }
+
 // get number of flows in hashtable
-uint count_flows(const HashTable table) {
+uint count_flows(HashTable const table) {
 
   int count = 0;
   Node *temp;
@@ -260,29 +140,45 @@ uint count_flows(const HashTable table) {
     uint list_size = get_list_size(temp);
     count += list_size;
   }
+
   return count;
 }
 
 // get number of nodes in a flow
-uint get_flow_size(const flow_base_t *flow) {
-
-  uint list_down_size = get_list_size(flow->package_down);
-  uint list_up_size = get_list_size(flow->package_up);
-
+uint get_flow_size(flow_base_t const *flow) {
+  uint list_down_size = get_list_size(flow->flow_down);
+  uint list_up_size = get_list_size(flow->flow_up);
   return list_down_size + list_up_size;
 }
 
-// pop head packet node from a flow
-struct parsed_payload pop_head_payload(Node **flow_direction) {
+// pop head node value from a flow
+parsed_payload pop_head_payload(Node **flow_direction) {
 
   Node *node = pop_first_node(flow_direction);
+
   if (node == NULL) {
     printf("flow is empty, nothing to delete\n");
   }
 
-  struct parsed_payload payload = *(struct parsed_payload *)node->value;
-
-  free_node(node);
-
+  parsed_payload payload = *(parsed_payload *)node->value;
+  free_payload_node(node);
   return payload;
+}
+
+// free a node value and it's data in a flow
+void free_payload_node(Node *payload_node) {
+  // free payload data
+  free((u_char *)((parsed_payload *)payload_node->value)->data);
+  free_node(payload_node);
+}
+
+// free all nodes in a flow
+void free_flow_direction(Node *flow_direction) {
+
+  Node *temp = flow_direction;
+  while (temp != NULL) {
+    Node *next = temp->next;
+    free_payload_node(temp);
+    temp = next;
+  }
 }
