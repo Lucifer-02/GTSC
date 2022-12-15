@@ -1,6 +1,11 @@
 #include "handler.h"
+#include "flow_api.h"
+#include "linked_list.h"
+#include "parsers.h"
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
 
 // classify and insert a new packet into hash table
 void insert_packet(HashTable table, parsed_packet pkt) {
@@ -24,6 +29,7 @@ void insert_packet(HashTable table, parsed_packet pkt) {
 
 // insert tcp packet to flow
 void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt) {
+
   flow_base_t *flow = search_flow(table, flow_key);
 
   if (flow == NULL) {
@@ -34,15 +40,56 @@ void insert_tcp_pkt(HashTable table, uint64_t flow_key, parsed_packet pkt) {
       flow_base_t new_flow = create_flow(pkt);
       insert_new_flow(table, create_flow_node(flow_key, new_flow));
       printf("new flow created\n");
+
     } else {
       printf("packet is not SYN, ignoring\n");
     }
 
-    // skip unnecessary processing packets
-  } else if (pkt.tcp.th_flags == 0x18) {
-    printf("flow found, inserting to it\n");
+  } else {
+
+    printf("Flow found\n");
+
+    uint32_t seq = pkt.tcp.seq;
+    Node **direction = get_flow_direction(flow, pkt);
+
+    if (is_up(flow, pkt)) {
+
+      insert_tcp_direction(seq, &(flow->exp_seq_up), direction, pkt);
+
+    } else {
+
+      if (pkt.tcp.th_flags == 0x012) {
+        flow->exp_seq_down = seq + 1;
+        return;
+      }
+
+      insert_tcp_direction(seq, &(flow->exp_seq_down), direction, pkt);
+    }
+  }
+}
+
+void insert_tcp_direction(uint32_t pkt_seq, uint32_t *exp_seq, Node **direction,
+                          parsed_packet pkt) {
+
+  if (pkt_seq == *exp_seq) {
+
+    print_payload(pkt.payload.data, pkt.payload.data_len);
+    *exp_seq += pkt.payload.data_len;
+
+    Node *payload_node;
+    while (payload_node = search_node(*direction, pkt_seq),
+           payload_node != NULL) {
+
+      print_payload(pkt.payload.data, pkt.payload.data_len);
+      *exp_seq += pkt.payload.data_len;
+      delete_node(direction, pkt_seq);
+    };
+
+  } else {
+
+    printf("Not exp sequence, inserting to flow\n");
     Node *new_pkt_node = create_payload_node(pkt);
-    insert_to_flow(new_pkt_node, DESC, get_flow_direction(flow, pkt));
+    insert_to_flow(new_pkt_node, ASC, direction);
   }
 }
 
@@ -126,16 +173,15 @@ void print_flow_direction(Node const *head, bool is_up) {
     printf("Seq: %ld, data size: %d\n", temp->key,
            ((parsed_payload *)temp->value)->data_len);
 
-	print_payload(((parsed_payload *)temp->value)->data,
-				  ((parsed_payload *)temp->value)->data_len);
-	printf("\t\t---------------------------------------------------------------"
-		   "----"
-		   "----\n");
+    /** print_payload(((parsed_payload *)temp->value)->data, */
+    /**               ((parsed_payload *)temp->value)->data_len); */
+    /** printf("\t\t---------------------------------------------------------------" */
+    /**        "----" */
+    /**        "----\n"); */
 
     temp = temp->next;
   }
 }
-
 
 // create new packet node
 Node *create_payload_node(parsed_packet pkt) {
@@ -183,30 +229,32 @@ Node *create_flow_node(uint64_t key, flow_base_t flow) {
 flow_base_t create_flow(parsed_packet pkt) {
 
   return pkt.protocol == IPPROTO_TCP
-			 ? (flow_base_t){
-				   .sip = pkt.src_ip,
-				   .dip = pkt.dst_ip,
-				   .sp= pkt.tcp.source,
-				   .dp= pkt.tcp.dest,
-				   .ip_proto = pkt.protocol,
-				   .flow_up = NULL,
-				   .flow_down = NULL,
-			   }
-			 : (flow_base_t){
-				   .sip = pkt.src_ip,
-				   .dip = pkt.dst_ip,
-				   .sp= pkt.udp.source,
-				   .dp= pkt.udp.dest,
-				   .ip_proto = pkt.protocol,
-				   .flow_up = NULL,
-				   .flow_down = NULL,
-			   };
+             ? (flow_base_t){.sip = pkt.src_ip,
+                             .dip = pkt.dst_ip,
+                             .sp = pkt.tcp.source,
+                             .dp = pkt.tcp.dest,
+                             .ip_proto = pkt.protocol,
+                             .flow_up = NULL,
+                             .flow_down = NULL,
+                             .exp_seq_up = pkt.tcp.seq + 1}
+             : (flow_base_t){.sip = pkt.src_ip,
+                             .dip = pkt.dst_ip,
+                             .sp = pkt.udp.source,
+                             .dp = pkt.udp.dest,
+                             .ip_proto = pkt.protocol,
+                             .flow_up = NULL,
+                             .flow_down = NULL};
 }
 
 // get flow direction by compare src ip of the packet with the flow
 Node **get_flow_direction(flow_base_t const *flow, parsed_packet pkt) {
-  return pkt.src_ip.s_addr == flow->sip.s_addr ? (Node **)(&flow->flow_up)
-                                               : (Node **)(&flow->flow_down);
+  return is_up(flow, pkt) ? (Node **)(&flow->flow_up)
+                          : (Node **)(&flow->flow_down);
+}
+
+// check packet is up or down
+bool is_up(flow_base_t const *flow, parsed_packet pkt) {
+  return pkt.src_ip.s_addr == flow->sip.s_addr;
 }
 
 /*

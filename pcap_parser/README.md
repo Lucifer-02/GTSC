@@ -1,7 +1,7 @@
-### Task 
+#Task 
 Thu thập, lọc, trích xuất và lưu trữ dữ liệu mạng
 
-### Usage
+# Usage
 1. Command
 	- Biên dịch: `make com`
 	- Biên dịch và chạy: `make run`
@@ -10,7 +10,7 @@ Thu thập, lọc, trích xuất và lưu trữ dữ liệu mạng
 	- Đọc dữ liệu từ file `sample.pcap`
 	- In ra thông tin các packet trong 1 flow sử dụng hàm print_flow() và search_flow() với tham số là flow key (xem trong file `db.txt`)
 
-##### Một vài thao tác cơ bản:
+## Một vài thao tác cơ bản:
 ```C
   printf("data length: %d\n",
          pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len);
@@ -24,9 +24,9 @@ Thu thập, lọc, trích xuất và lưu trữ dữ liệu mạng
 
 ```
 
-### Description
+# Description
 
-##### Project hoạt động theo trình tự sau:
+## Project hoạt động theo trình tự sau:
 
 Sniffer/Parser ==> Handler <==> Database
 
@@ -43,7 +43,7 @@ Với:
 	- Sử dụng HashTable
 	- Mỗi index chứa 1 list các flow, mỗi flow chứa 2 list các payload chiều up/down
 
-### TODO
+# TODO
 - [x] Offline sniffer
 - [ ] Online sniffer
 - [ ] Đa luồng
@@ -56,6 +56,6 @@ Với:
 - [ ] Lọc bỏ các gói trùng lặp 
 - [x] Lọc gói trong luồng chưa được khởi tạo
 
-## FAQ
-### Tại sao tách code thao tác hash table?
+# FAQ
+## Tại sao tách code thao tác hash table?
 Mục tiêu là khiến HashTable độc lập nhất có thể (chỉ gồm các Linked List Flow chứa các Linked List Packet, các Node có dạng Key-Value), không liên quan đến cấu trúc dữ liệu của Node value

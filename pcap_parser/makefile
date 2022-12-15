@@ -5,6 +5,7 @@ CFLAGS += -lpcap -Wall -Wextra -Wpedantic \
 
 run: com
 	./test.o
+	./test.o > out.txt
 
 com: 
 	gcc  -g -o test.o test.c lib/dissection.c lib/hash_table.c lib/parsers.c lib/linked_list.c lib/handler.c $(CFLAGS)

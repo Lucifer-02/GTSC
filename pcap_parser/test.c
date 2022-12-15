@@ -71,13 +71,13 @@ void get_packets(pcap_t *handler) {
            "----\n");
   }
 
-  printf("data length: %d\n",
-         pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len);
-  printf("data length: %d\n",
-         pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len);
-  print_hashtable(table);
-  printf("number of flows: %d\n", count_flows(table));
-  printf("Number of packets: %d\n", count_packets(table));
+  /** printf("data length: %d\n", */
+  /**        pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len); */
+  /** printf("data length: %d\n", */
+  /**        pop_head_payload(&search_flow(table, 2961644043)->flow_up).data_len); */
+  /** print_hashtable(table); */
+  /** printf("number of flows: %d\n", count_flows(table)); */
+  /** printf("Number of packets: %d\n", count_packets(table)); */
 
   print_flow(*search_flow(table, 2961644043));
 
