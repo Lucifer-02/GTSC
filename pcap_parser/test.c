@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <bits/types/struct_timeval.h>
 #include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -12,8 +13,7 @@ int const HASH_TABLE_SIZE = 50;
 
 void get_packets(pcap_t *handler, char *output_path);
 void save_to_CSV(FILE *fp, parsed_packet pkt, package frame,
-                 struct pcap_pkthdr *header, long int init_sec,
-                 long int init_usec);
+                 struct pcap_pkthdr *header, uint64_t init_time);
 
 int main(int argc, char *argv[]) {
 
@@ -55,15 +55,14 @@ void get_packets(pcap_t *handler, char *output_path) {
 
   /** HashTable table = create_hash_table(HASH_TABLE_SIZE); */
 
-  long int init_sec, init_usec, i = 0;
+  uint64_t init_time;
+  int i = 0;
 
   while (pcap_next_ex(handler, &header, &full_packet) >= 0) {
 
     // get time stamp
     if (i == 0) {
-      init_sec = header->ts.tv_sec;
-      init_usec = header->ts.tv_usec;
-      printf("init time: %ld\n", init_sec);
+      init_time = header->ts.tv_sec * 1000000 + header->ts.tv_usec;
     }
     i++;
 
@@ -96,7 +95,7 @@ void get_packets(pcap_t *handler, char *output_path) {
 
     // insert to hash table
     parsed_packet pkt = pkt_parser(frame, packet, segment, payload);
-    save_to_CSV(fp, pkt, frame, header, init_sec, init_usec);
+    save_to_CSV(fp, pkt, frame, header, init_time);
     /** insert_packet(table, pkt); */
 
   END:
@@ -111,11 +110,11 @@ void get_packets(pcap_t *handler, char *output_path) {
 }
 
 void save_to_CSV(FILE *fp, parsed_packet pkt, package frame,
-                 struct pcap_pkthdr *header, long int init_sec,
-                 long int init_usec) {
+                 struct pcap_pkthdr *header, uint64_t init_ts) {
   char buf[64];
-  snprintf(buf, sizeof buf, "%ld.%06ld", header->ts.tv_sec - init_sec,
-           header->ts.tv_usec - init_usec);
+  uint64_t pkt_ts =
+      (header->ts.tv_sec * 1000000 + header->ts.tv_usec) - init_ts;
+  snprintf(buf, sizeof buf, "%ld.%06ld", pkt_ts / 1000000, pkt_ts % 1000000);
 
   char *sip = strdup(inet_ntoa(pkt.ip_header.ip_src));
   char *dip = strdup(inet_ntoa(pkt.ip_header.ip_dst));
