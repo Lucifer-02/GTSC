@@ -63,9 +63,7 @@ void get_packets(pcap_t *handler, char *output_path) {
     if (i == 0) {
       init_sec = header->ts.tv_sec;
       init_usec = header->ts.tv_usec;
-      printf("init time: %ld\n", init_sec);
     }
-    i++;
 
     // Show the packet number
     printf("Packet # %i\n", ++packetCount);
