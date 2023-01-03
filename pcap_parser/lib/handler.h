@@ -17,6 +17,7 @@ void print_flow(flow_base_t flow);
 void print_flow_direction(Node const *head, bool is_up);
 Node *create_flow_node(uint64_t key, flow_base_t flow);
 Node *create_payload_node(parsed_packet pkt);
+Node *create_pkt_node(parsed_packet pkt);
 
 // create new flow from packet info and initialize flow direction
 flow_base_t create_flow(parsed_packet pkt);

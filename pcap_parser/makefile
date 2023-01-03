@@ -8,7 +8,7 @@ run: com
 	./test.o > out.txt
 
 com: 
-	gcc  -g -o test.o test.c lib/dissection.c lib/hash_table.c lib/parsers.c lib/linked_list.c lib/handler.c $(CFLAGS)
+	gcc -g -o test.o test.c lib/dissection.c lib/hash_table.c lib/parsers.c lib/linked_list.c lib/handler.c $(CFLAGS)
 
 clean:
 	rm -f test.o parse_offline.o parse_online.o out.txt

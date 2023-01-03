@@ -3,7 +3,7 @@ import socket
 import threading
 
 PORT = 587
-SERVER = "192.168.12.108"
+SERVER = "192.168.14.92"
 ADDR = (SERVER, PORT)
 
 # create socket

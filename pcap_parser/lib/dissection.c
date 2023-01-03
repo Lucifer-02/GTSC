@@ -15,6 +15,7 @@ package frame_dissector(u_char const *packet,
 
   struct ether_header const *ethernet = (struct ether_header *)(packet);
 
+
   return (package){.header_pointer = (u_char *)ethernet,
                    .package_size = header->len,
                    .type = ethernet->ether_type,

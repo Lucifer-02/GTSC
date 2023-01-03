@@ -1,6 +1,7 @@
 #include "hash_table.h"
-#include <stdio.h>
+#include "parsers.h"
 #include <assert.h>
+#include <stdio.h>
 
 // hash function
 uint hash(uint64_t x, size_t len) {
@@ -172,13 +173,19 @@ void free_payload_node(Node *payload_node) {
   free_node(payload_node);
 }
 
+// free a packet node in a flow
+void free_pkt_node(Node *pkt_node) {
+  free((u_char *)((parsed_packet *)pkt_node->value)->payload.data);
+  free_node(pkt_node);
+}
+
 // free all nodes in a flow
 void free_flow_direction(Node *flow_direction) {
 
   Node *temp = flow_direction;
   while (temp != NULL) {
     Node *next = temp->next;
-    free_payload_node(temp);
+    free_pkt_node(temp);
     temp = next;
   }
 }

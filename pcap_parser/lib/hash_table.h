@@ -45,6 +45,9 @@ parsed_payload pop_head_payload(Node **flow_diection);
 // free a payload node and it's data in a flow
 void free_payload_node(Node *payload_node);
 
+// free a packet node in a flow
+void free_pkt_node(Node *pkt_node);
+
 // free all payload nodes in a flow and free flow
 void free_flow_direction(Node *flow_direction);
 

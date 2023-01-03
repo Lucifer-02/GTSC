@@ -2,7 +2,7 @@ import socket
 from base64 import b64encode
 
 
-SERVER = "192.168.12.108"
+SERVER = "192.168.14.92"
 PORT = 587
 ADDR = (SERVER, PORT)
 
@@ -10,7 +10,7 @@ USERNAME = "hoang@localserver.com"
 PASSWORD = "1"
 
 FROM = "hoang@localserver.com"
-TO = "minh@localserver.com"  # must be a list
+TO = "hung@localserver.com"  # must be a list
 SUBJECT = "alo"
 TEXT = "Chao Minh dz"
 
